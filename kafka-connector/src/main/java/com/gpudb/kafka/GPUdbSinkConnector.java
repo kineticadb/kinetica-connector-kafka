@@ -6,19 +6,36 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.common.utils.AppInfoParser;
 import org.apache.kafka.connect.connector.Task;
 import org.apache.kafka.connect.sink.SinkConnector;
 
+/**
+ * Kafka SinkConnector for streaming data to a GPUdb table.
+ * 
+ * The SinkConnector is used to configure the {@link GPUdbSinkTask}, which
+ * performs the work of writing data from Kafka into the target table.
+ */
 public class GPUdbSinkConnector extends SinkConnector {
+    /** Config file key for GPUdb URL */
     public static final String URL_CONFIG = "gpudb.url";
+    /** Config file key for GPUdb username */
     public static final String USERNAME_CONFIG = "gpudb.username";
+    /** Config file key for GPUdb password */
     public static final String PASSWORD_CONFIG = "gpudb.password";
+    /** Config file key for GPUdb request/response timeouts */
     public static final String TIMEOUT_CONFIG = "gpudb.timeout";
+    /** Config file key for name of GPUdb collection containing target table */
     public static final String COLLECTION_NAME_CONFIG = "gpudb.collection_name";
+    /** Config file key for name of GPUdb table to use as streaming target */
     public static final String TABLE_NAME_CONFIG = "gpudb.table_name";
+    /** Config file key for # of records to collect before writing to GPUdb */
     public static final String BATCH_SIZE_CONFIG = "gpudb.batch_size";
+
+    private static final String DEFAULT_TIMEOUT = "0";
+    private static final String DEFAULT_BATCH_SIZE = "10000";
 
     private Map<String, String> config;
 
@@ -67,7 +84,7 @@ public class GPUdbSinkConnector extends SinkConnector {
 
             config.put(TIMEOUT_CONFIG, props.get(TIMEOUT_CONFIG));
         } else {
-            config.put(TIMEOUT_CONFIG, "0");
+            config.put(TIMEOUT_CONFIG, DEFAULT_TIMEOUT);
         }
 
         if (props.containsKey(COLLECTION_NAME_CONFIG)) {
@@ -90,8 +107,10 @@ public class GPUdbSinkConnector extends SinkConnector {
             } catch (Exception ex) {
                 throw new IllegalArgumentException("Invalid batch size (" + props.get(BATCH_SIZE_CONFIG) + ").");
             }
+
+            config.put(BATCH_SIZE_CONFIG, props.get(BATCH_SIZE_CONFIG));
         } else {
-            config.put(BATCH_SIZE_CONFIG, "10000");
+            config.put(BATCH_SIZE_CONFIG, DEFAULT_BATCH_SIZE);
         }
     }
 
@@ -121,9 +140,9 @@ public class GPUdbSinkConnector extends SinkConnector {
                 .define(URL_CONFIG, ConfigDef.Type.STRING, ConfigDef.Importance.HIGH, "GPUdb URL, e.g. 'http://localhost:9191'")
                 .define(USERNAME_CONFIG, ConfigDef.Type.STRING, ConfigDef.Importance.HIGH, "GPUdb username (optional)")
                 .define(PASSWORD_CONFIG, ConfigDef.Type.STRING, ConfigDef.Importance.HIGH, "GPUdb password (optional)")
-                .define(TIMEOUT_CONFIG, ConfigDef.Type.INT, ConfigDef.Importance.HIGH, "GPUdb timeout (ms); 0 = no timeout")
-                .define(COLLECTION_NAME_CONFIG, ConfigDef.Type.STRING, ConfigDef.Importance.HIGH, "GPUdb collection name (optional)")
+                .define(TIMEOUT_CONFIG, ConfigDef.Type.INT, ConfigDef.Importance.HIGH, "GPUdb timeout (ms) (optional, default " + DEFAULT_TIMEOUT + "); 0 = no timeout")
+                .define(COLLECTION_NAME_CONFIG, ConfigDef.Type.STRING, ConfigDef.Importance.HIGH, "GPUdb collection name (optional, default--no collection name)")
                 .define(TABLE_NAME_CONFIG, ConfigDef.Type.STRING, ConfigDef.Importance.HIGH, "GPUdb table name")
-                .define(BATCH_SIZE_CONFIG, ConfigDef.Type.INT, ConfigDef.Importance.HIGH, "GPUdb batch size (optional, default 10000)");
+                .define(BATCH_SIZE_CONFIG, ConfigDef.Type.INT, ConfigDef.Importance.HIGH, "GPUdb batch size (optional, default " + DEFAULT_BATCH_SIZE + ")");
     }
 }

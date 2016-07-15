@@ -9,6 +9,7 @@ import com.gpudb.Type.Column;
 import com.gpudb.protocol.CreateTableMonitorResponse;
 import com.gpudb.protocol.ShowTableRequest;
 import com.gpudb.protocol.ShowTableResponse;
+
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.ByteBuffer;
@@ -17,6 +18,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.LinkedBlockingQueue;
+
 import org.apache.kafka.common.utils.AppInfoParser;
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.SchemaBuilder;
@@ -29,7 +31,20 @@ import org.zeromq.ZFrame;
 import org.zeromq.ZMQ;
 import org.zeromq.ZMsg;
 
+/**
+ * Kafka SourceTask for streaming data from a GPUdb table.
+ * 
+ * The data streaming pipeline will begin with creating a table monitor on the
+ * given source table.  As records are inserted into the table, a copy will be
+ * placed on a queue, to which the {@link GPUdbSourceConnector} is attached.
+ * The SourceTask will stream records from the queue as they are added, and add
+ * them to a Kafka topic.
+ * 
+ * The streaming source table can either be part of a collection or not, but
+ * cannot be a collection itself.
+ */
 public class GPUdbSourceTask extends SourceTask {
+    private static final String CONF_MONITOR_PORT = "conf.set_monitor_port";
     private static final Logger LOG = LoggerFactory.getLogger(GPUdbSourceTask.class);
 
     private LinkedBlockingQueue<SourceRecord> queue;
@@ -39,7 +54,6 @@ public class GPUdbSourceTask extends SourceTask {
     public void start(final Map<String, String> props) {
         final URL url;
         final String tableName = props.get(GPUdbSourceConnector.TABLE_NAME_CONFIG);
-        final String topic = props.get(GPUdbSourceConnector.TOPIC_CONFIG);
 
         try {
             url = new URL(props.get(GPUdbSourceConnector.URL_CONFIG));
@@ -69,7 +83,7 @@ public class GPUdbSourceTask extends SourceTask {
             // Get the table monitor URL from /show/system/properties. If table
             // monitor support is not enabled or the port is invalid, fail.
 
-            String zmqPortString = gpudb.showSystemProperties(GPUdb.options("properties", "conf.set_monitor_port")).getPropertyMap().get("conf.set_monitor_port");
+            String zmqPortString = gpudb.showSystemProperties(GPUdb.options()).getPropertyMap().get(CONF_MONITOR_PORT);
 
             if (zmqPortString == null || zmqPortString.equals("-1")) {
                 throw new RuntimeException("Table monitor not supported.");
@@ -89,7 +103,7 @@ public class GPUdbSourceTask extends SourceTask {
 
             zmqUrl = "tcp://" + url.getHost() + ":" + zmqPort;
         } catch (GPUdbException ex) {
-            throw new RuntimeException(ex.getMessage(), ex);
+            throw new RuntimeException(ex);
         }
 
         queue = new LinkedBlockingQueue<>();
