@@ -25,6 +25,17 @@ import org.apache.kafka.connect.sink.SinkTask;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Kafka SinkTask for streaming data into a GPUdb table.
+ * 
+ * The data streaming pipeline will begin with records being added to the Kafka
+ * topic to which the {@link GPUdbSinkConnector} is attached.  As records are
+ * queued, this SinkTask will connect to that queue, stream records from it, and
+ * insert them into a GPUdb target table.
+ * 
+ * The streaming target table can either be part of a collection or not, and can
+ * also be a collection itself.
+ */
 public class GPUdbSinkTask extends SinkTask {
     private static final Logger LOG = LoggerFactory.getLogger(GPUdbSinkTask.class);
 
@@ -60,8 +71,8 @@ public class GPUdbSinkTask extends SinkTask {
                         .setPassword(config.get(GPUdbSinkConnector.PASSWORD_CONFIG))
                         .setTimeout(Integer.parseInt(config.get(GPUdbSinkConnector.TIMEOUT_CONFIG))));
             } catch (GPUdbException ex) {
-                LOG.error("Unable to connect to GPUdb at " + url + ": " + ex.getMessage(), ex);
-                throw new RuntimeException(ex.getMessage(), ex);
+                LOG.error("Unable to connect to GPUdb at " + url, ex);
+                throw new RuntimeException(ex);
             }
 
             // If the table exists, get the schema from it.
@@ -71,8 +82,8 @@ public class GPUdbSinkTask extends SinkTask {
                     type = Type.fromTable(gpudb, tableName);
                 }
             } catch (GPUdbException ex) {
-                LOG.error("Unable to lookup table " + tableName + " in GPUdb at " + url + ": " + ex.getMessage(), ex);
-                throw new RuntimeException(ex.getMessage(), ex);
+                LOG.error("Unable to lookup table " + tableName + " in GPUdb at " + url, ex);
+                throw new RuntimeException(ex);
             }
 
             // If the table does not exist, loop through the first sink record's
@@ -110,8 +121,9 @@ public class GPUdbSinkTask extends SinkTask {
                                 break;
 
                             default:
-                                LOG.error("Unsupported type for field " + field.name() + ".");
-                                throw new RuntimeException("Unsupported type for field " + field.name() + ".");
+                            	String errorMessage = "Unsupported type for field " + field.name() + ".";
+                                LOG.error(errorMessage);
+                                throw new RuntimeException(errorMessage);
                         }
                     }
                 } catch (DataException ex) {
@@ -128,11 +140,15 @@ public class GPUdbSinkTask extends SinkTask {
 
                 try {
                     type = new Type(columns);
-                    gpudb.createTable(tableName, type.create(gpudb),
-                            GPUdb.options(CreateTableRequest.Options.COLLECTION_NAME, config.get(GPUdbSinkConnector.COLLECTION_NAME_CONFIG)));
+                    gpudb.createTable
+                    (
+                        tableName,
+                        type.create(gpudb),
+                        GPUdb.options(CreateTableRequest.Options.COLLECTION_NAME, config.get(GPUdbSinkConnector.COLLECTION_NAME_CONFIG))
+                    );
                 } catch (Exception ex) {
-                    LOG.error("Unable to create table " + tableName + " in GPUdb at " + url + ": " + ex.getMessage(), ex);
-                    throw new RuntimeException(ex.getMessage(), ex);
+                    LOG.error("Unable to create table " + tableName + " in GPUdb at " + url, ex);
+                    throw new RuntimeException(ex);
                 }
             }
 
@@ -145,8 +161,8 @@ public class GPUdbSinkTask extends SinkTask {
                         Integer.parseInt(config.get(GPUdbSinkConnector.BATCH_SIZE_CONFIG)),
                         null);
             } catch (GPUdbException ex) {
-                LOG.error("Unable to create bulk inserter for table " + tableName + " in GPUdb at " + url + ": " + ex.getMessage(), ex);
-                throw new RuntimeException(ex.getMessage(), ex);
+                LOG.error("Unable to create bulk inserter for table " + tableName + " in GPUdb at " + url, ex);
+                throw new RuntimeException(ex);
             }
         }
 
@@ -248,8 +264,8 @@ public class GPUdbSinkTask extends SinkTask {
                 try {
                     bi.insert(record);
                 } catch (GPUdbException ex) {
-                    LOG.error("Unable to insert into table " + tableName + " in GPUdb at " + url + ": " + ex.getMessage(), ex);
-                    throw new RuntimeException(ex.getMessage(), ex);
+                    LOG.error("Unable to insert into table " + tableName + " in GPUdb at " + url, ex);
+                    throw new RuntimeException(ex);
                 }
             }
         }
@@ -263,8 +279,8 @@ public class GPUdbSinkTask extends SinkTask {
             try {
                 bi.flush();
             } catch (GPUdbException ex) {
-                LOG.error("Unable to insert into table " + config.get(GPUdbSinkConnector.TABLE_NAME_CONFIG) + " in GPUdb at " + config.get(GPUdbSinkConnector.URL_CONFIG) + ": " + ex.getMessage(), ex);
-                throw new RuntimeException(ex.getMessage(), ex);
+                LOG.error("Unable to insert into table " + config.get(GPUdbSinkConnector.TABLE_NAME_CONFIG) + " in GPUdb at " + config.get(GPUdbSinkConnector.URL_CONFIG), ex);
+                throw new RuntimeException(ex);
             }
         }
     }

@@ -6,18 +6,33 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.common.utils.AppInfoParser;
 import org.apache.kafka.connect.connector.Task;
 import org.apache.kafka.connect.source.SourceConnector;
 
+/**
+ * Kafka SourceConnector for streaming data from a GPUdb table.
+ * 
+ * The SourceConnector is used to configure the {@link GPUdbSourceTask}, which
+ * performs the work of pulling data from the source into Kafka.
+ */
 public class GPUdbSourceConnector extends SourceConnector {
+    /** Config file key for GPUdb URL */
     public static final String URL_CONFIG = "gpudb.url";
+    /** Config file key for GPUdb username */
     public static final String USERNAME_CONFIG = "gpudb.username";
+    /** Config file key for GPUdb password */
     public static final String PASSWORD_CONFIG = "gpudb.password";
+    /** Config file key for GPUdb request/response timeouts */
     public static final String TIMEOUT_CONFIG = "gpudb.timeout";
+    /** Config file key for name of GPUdb table to use as streaming source */
     public static final String TABLE_NAME_CONFIG = "gpudb.table_name";
+    /** Config file key for name of Kafka topic to stream records to */
     public static final String TOPIC_CONFIG = "topic";
+
+    private static final String DEFAULT_TIMEOUT = "0";
 
     private Map<String, String> config;
 
@@ -66,7 +81,7 @@ public class GPUdbSourceConnector extends SourceConnector {
 
             config.put(TIMEOUT_CONFIG, props.get(TIMEOUT_CONFIG));
         } else {
-            config.put(TIMEOUT_CONFIG, "0");
+            config.put(TIMEOUT_CONFIG, DEFAULT_TIMEOUT);
         }
 
         if (!props.containsKey(TABLE_NAME_CONFIG))
@@ -106,7 +121,7 @@ public class GPUdbSourceConnector extends SourceConnector {
                 .define(URL_CONFIG, ConfigDef.Type.STRING, ConfigDef.Importance.HIGH, "GPUdb URL, e.g. 'http://localhost:9191'")
                 .define(USERNAME_CONFIG, ConfigDef.Type.STRING, ConfigDef.Importance.HIGH, "GPUdb username (optional)")
                 .define(PASSWORD_CONFIG, ConfigDef.Type.STRING, ConfigDef.Importance.HIGH, "GPUdb password (optional)")
-                .define(TIMEOUT_CONFIG, ConfigDef.Type.INT, ConfigDef.Importance.HIGH, "GPUdb timeout (ms); 0 = no timeout")
+                .define(TIMEOUT_CONFIG, ConfigDef.Type.INT, ConfigDef.Importance.HIGH, "GPUdb timeout (ms) (optional, default " + DEFAULT_TIMEOUT + "); 0 = no timeout")
                 .define(TABLE_NAME_CONFIG, ConfigDef.Type.STRING, ConfigDef.Importance.HIGH, "GPUdb table name")
                 .define(TOPIC_CONFIG, ConfigDef.Type.STRING, ConfigDef.Importance.HIGH, "Kafka topic");
     }

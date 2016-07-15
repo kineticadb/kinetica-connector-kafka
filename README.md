@@ -9,6 +9,7 @@ streamed from a *GPUdb* table or to a *GPUdb* table via *Kafka Connect*.  The
 custom *Kafka Source Connector* and *Sink Connector* do no additional
 processing.
 
+Source code for the connector can be found at https://github.com/GPUdb/gpudb-connector-kafka
 
 
 Connector Classes
@@ -23,6 +24,8 @@ stream from a *GPUdb* table monitor
 * ``GPUdbSinkConnector`` - A *Kafka Sink Connector*, which receives a data
 stream from a *Kafka Source Connector* and writes it to *GPUdb*
 
+
+-----
 
 
 Streaming Data from GPUdb into Kafka
@@ -42,6 +45,8 @@ accepts the following parameters:
 * ``gpudb.table_name``: The name of the table in *GPUdb* to stream from
 * ``topic``: The *Kafka* topic name
 
+
+-----
 
 
 Streaming Data from Kafka into GPUdb
@@ -70,12 +75,59 @@ accepts the following parameters:
 -----
 
 
+Installation & Configuration
+----------------------------
+
+The connector provided in this project assumes launching will be done on a
+server capable of submitting *Kafka* connectors in standalone mode or to a
+cluster.
+
+Two JAR files are produced by this project:
+
+* ``kafka-connector-<ver>.jar`` - default JAR (not for use)
+* ``kafka-connector-<ver>-jar-with-dependencies.jar`` - complete connector JAR
+
+To install the connector:
+
+* Copy the ``kafka-connector-<ver>-jar-with-dependencies.jar`` library to the
+  target server
+
+* Create a configuration file (``source.properties``) for the source connector::
+
+        name=<UniqueNameOfSourceConnector>
+        connector.class=com.gpudb.kafka.GPUdbSourceConnector
+        tasks.max=1
+        topic=<GPUdbKafkaTopicName>
+        gpudb.url=<GPUdbServiceURL>
+        gpudb.username=<GPUdbAuthenticatingUserName>
+        gpudb.password=<GPUdbAuthenticatingUserPassword>
+        gpudb.table_name=<GPUdbSourceTableName>
+        gpudb.timeout=<GPUdbConnectionTimeoutInSeconds>
+
+* Create a configuration file (``sink.properties``) for the sink connector::
+
+        name=<UniqueNameOfSinkConnector>
+        connector.class=com.gpudb.kafka.GPUdbSinkConnector
+        tasks.max=<NumberOfKafkaToGPUdbWritingProcesses>
+        topics=<GPUdbKafkaTopicName>
+        gpudb.url=<GPUdbServiceURL>
+        gpudb.username=<GPUdbAuthenticatingUserName>
+        gpudb.password=<GPUdbAuthenticatingUserPassword>
+        gpudb.collection_name=<TargetGPUdbCollectionName>
+        gpudb.table_name=<GPUdbTargetTableName>
+        gpudb.timeout=<GPUdbConnectionTimeoutInSeconds>
+        gpudb.batch_size=<NumberOfRecordsToBatchBeforeInsert>
+
+
+-----
+
+
 Example
 -------
 
-This example will demonstrate the *GPUdb Kafka Connector* in standalone
-mode. It assumes the presence of a ``Twitter`` table in *GPUdb* that has
-records streaming into it.
+This example will demonstrate the *GPUdb Kafka Connector* in standalone mode.
+It assumes the presence of a ``TwitterSource`` table in *GPUdb* that has records
+streaming into it.
 
 * Start Kafka locally
 
@@ -85,7 +137,7 @@ records streaming into it.
         connector.class=com.gpudb.kafka.GPUdbSourceConnector
         tasks.max=1
         gpudb.url=http://localhost:9191
-        gpudb.table_name=Twitter
+        gpudb.table_name=TwitterSource
         topic=TwitterTopic
 
 * Create a configuration file (``sink.properties``) for the sink connector::
@@ -94,7 +146,7 @@ records streaming into it.
         connector.class=com.gpudb.kafka.GPUdbSinkConnector
         tasks.max=4
         gpudb.url=http://localhost:9191
-        gpudb.table_name=Twitter2
+        gpudb.table_name=TwitterTarget
         gpudb.batch_size=10
         topics=TwitterTopic
 
@@ -107,5 +159,5 @@ records streaming into it.
 
         bin/connect-standalone.sh config/connect-standalone.properties source.properties sink.properties
 
-This will stream data as it is inserted into the ``Twitter`` table into
-the ``Twitter2`` table via *Kafka Connect*.
+This will stream data as it is inserted into the ``TwitterSource`` table into
+the ``TwitterTarget`` table via *Kafka Connect*.
