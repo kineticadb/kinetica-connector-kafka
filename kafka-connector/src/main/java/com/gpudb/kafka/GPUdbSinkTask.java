@@ -19,6 +19,7 @@ import org.apache.kafka.common.utils.AppInfoParser;
 import org.apache.kafka.connect.data.Field;
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.Struct;
+import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.errors.DataException;
 import org.apache.kafka.connect.sink.SinkRecord;
 import org.apache.kafka.connect.sink.SinkTask;
@@ -27,12 +28,12 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Kafka SinkTask for streaming data into a GPUdb table.
- * 
+ *
  * The data streaming pipeline will begin with records being added to the Kafka
  * topic to which the {@link GPUdbSinkConnector} is attached.  As records are
  * queued, this SinkTask will connect to that queue, stream records from it, and
  * insert them into a GPUdb target table.
- * 
+ *
  * The streaming target table can either be part of a collection or not, and can
  * also be a collection itself.
  */
@@ -72,7 +73,7 @@ public class GPUdbSinkTask extends SinkTask {
                         .setTimeout(Integer.parseInt(config.get(GPUdbSinkConnector.TIMEOUT_CONFIG))));
             } catch (GPUdbException ex) {
                 LOG.error("Unable to connect to GPUdb at " + url, ex);
-                throw new RuntimeException(ex);
+                throw new ConnectException(ex);
             }
 
             // If the table exists, get the schema from it.
@@ -83,7 +84,7 @@ public class GPUdbSinkTask extends SinkTask {
                 }
             } catch (GPUdbException ex) {
                 LOG.error("Unable to lookup table " + tableName + " in GPUdb at " + url, ex);
-                throw new RuntimeException(ex);
+                throw new ConnectException(ex);
             }
 
             // If the table does not exist, loop through the first sink record's
@@ -123,7 +124,7 @@ public class GPUdbSinkTask extends SinkTask {
                             default:
                             	String errorMessage = "Unsupported type for field " + field.name() + ".";
                                 LOG.error(errorMessage);
-                                throw new RuntimeException(errorMessage);
+                                throw new ConnectException(errorMessage);
                         }
                     }
                 } catch (DataException ex) {
@@ -148,7 +149,7 @@ public class GPUdbSinkTask extends SinkTask {
                     );
                 } catch (Exception ex) {
                     LOG.error("Unable to create table " + tableName + " in GPUdb at " + url, ex);
-                    throw new RuntimeException(ex);
+                    throw new ConnectException(ex);
                 }
             }
 
@@ -162,7 +163,7 @@ public class GPUdbSinkTask extends SinkTask {
                         null);
             } catch (GPUdbException ex) {
                 LOG.error("Unable to create bulk inserter for table " + tableName + " in GPUdb at " + url, ex);
-                throw new RuntimeException(ex);
+                throw new ConnectException(ex);
             }
         }
 
@@ -265,7 +266,7 @@ public class GPUdbSinkTask extends SinkTask {
                     bi.insert(record);
                 } catch (GPUdbException ex) {
                     LOG.error("Unable to insert into table " + tableName + " in GPUdb at " + url, ex);
-                    throw new RuntimeException(ex);
+                    throw new ConnectException(ex);
                 }
             }
         }
@@ -280,7 +281,7 @@ public class GPUdbSinkTask extends SinkTask {
                 bi.flush();
             } catch (GPUdbException ex) {
                 LOG.error("Unable to insert into table " + config.get(GPUdbSinkConnector.TABLE_NAME_CONFIG) + " in GPUdb at " + config.get(GPUdbSinkConnector.URL_CONFIG), ex);
-                throw new RuntimeException(ex);
+                throw new ConnectException(ex);
             }
         }
     }

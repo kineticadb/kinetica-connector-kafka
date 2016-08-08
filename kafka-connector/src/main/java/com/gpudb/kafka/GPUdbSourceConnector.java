@@ -3,6 +3,7 @@ package com.gpudb.kafka;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -27,10 +28,12 @@ public class GPUdbSourceConnector extends SourceConnector {
     public static final String PASSWORD_CONFIG = "gpudb.password";
     /** Config file key for GPUdb request/response timeouts */
     public static final String TIMEOUT_CONFIG = "gpudb.timeout";
-    /** Config file key for name of GPUdb table to use as streaming source */
-    public static final String TABLE_NAME_CONFIG = "gpudb.table_name";
-    /** Config file key for name of Kafka topic to stream records to */
-    public static final String TOPIC_CONFIG = "topic";
+    /** Config file key for names of GPUdb tables to use as streaming sources */
+    public static final String TABLE_NAMES_CONFIG = "gpudb.table_names";
+    /** Config file key for token prepended to each source table name to form
+     *  the name of the corresponding Kafka topic into which those records will
+     *  be queued */
+    public static final String TOPIC_PREFIX_CONFIG = "topic_prefix";
 
     private static final String DEFAULT_TIMEOUT = "0";
 
@@ -42,6 +45,7 @@ public class GPUdbSourceConnector extends SourceConnector {
     }
 
     @Override
+    @SuppressWarnings("ResultOfObjectAllocationIgnored")
     public void start(Map<String, String> props) {
         config = new HashMap<>();
 
@@ -84,19 +88,19 @@ public class GPUdbSourceConnector extends SourceConnector {
             config.put(TIMEOUT_CONFIG, DEFAULT_TIMEOUT);
         }
 
-        if (!props.containsKey(TABLE_NAME_CONFIG))
+        if (!props.containsKey(TABLE_NAMES_CONFIG))
         {
-            throw new IllegalArgumentException("Missing table name.");
+            throw new IllegalArgumentException("Missing table names.");
         }
 
-        config.put(TABLE_NAME_CONFIG, props.get(TABLE_NAME_CONFIG));
+        config.put(TABLE_NAMES_CONFIG, props.get(TABLE_NAMES_CONFIG));
 
-        if (!props.containsKey(TOPIC_CONFIG))
+        if (!props.containsKey(TOPIC_PREFIX_CONFIG))
         {
             throw new IllegalArgumentException("Missing topic.");
         }
 
-        config.put(TOPIC_CONFIG, props.get(TOPIC_CONFIG));
+        config.put(TOPIC_PREFIX_CONFIG, props.get(TOPIC_PREFIX_CONFIG));
     }
 
     @Override
@@ -106,8 +110,25 @@ public class GPUdbSourceConnector extends SourceConnector {
 
     @Override
     public List<Map<String, String>> taskConfigs(int maxTasks) {
+        List<String> tables = Arrays.asList(config.get(TABLE_NAMES_CONFIG).split(","));
+
+        int partitionSize = tables.size() / maxTasks;
+        int partitionExtras = tables.size() % maxTasks;
         List<Map<String, String>> taskConfigs = new ArrayList<>();
-        taskConfigs.add(config);
+
+        for (int i = 0; i < maxTasks; i++) {
+            int partitionStart = i * partitionSize + Math.min(i, partitionExtras);
+            int partitionEnd = (i + 1) * partitionSize + Math.min(i + 1, partitionExtras);
+
+            if (partitionStart == partitionEnd) {
+                break;
+            }
+
+            Map<String, String> taskConfig = new HashMap<>(config);
+            taskConfig.put(TABLE_NAMES_CONFIG, String.join(",", tables.subList(partitionStart, partitionEnd)));
+            taskConfigs.add(taskConfig);
+        }
+
         return taskConfigs;
     }
 
@@ -122,7 +143,7 @@ public class GPUdbSourceConnector extends SourceConnector {
                 .define(USERNAME_CONFIG, ConfigDef.Type.STRING, ConfigDef.Importance.HIGH, "GPUdb username (optional)")
                 .define(PASSWORD_CONFIG, ConfigDef.Type.STRING, ConfigDef.Importance.HIGH, "GPUdb password (optional)")
                 .define(TIMEOUT_CONFIG, ConfigDef.Type.INT, ConfigDef.Importance.HIGH, "GPUdb timeout (ms) (optional, default " + DEFAULT_TIMEOUT + "); 0 = no timeout")
-                .define(TABLE_NAME_CONFIG, ConfigDef.Type.STRING, ConfigDef.Importance.HIGH, "GPUdb table name")
-                .define(TOPIC_CONFIG, ConfigDef.Type.STRING, ConfigDef.Importance.HIGH, "Kafka topic");
+                .define(TABLE_NAMES_CONFIG, ConfigDef.Type.STRING, ConfigDef.Importance.HIGH, "GPUdb table names (comma-separated)")
+                .define(TOPIC_PREFIX_CONFIG, ConfigDef.Type.STRING, ConfigDef.Importance.HIGH, "Kafka topic prefix");
     }
 }
