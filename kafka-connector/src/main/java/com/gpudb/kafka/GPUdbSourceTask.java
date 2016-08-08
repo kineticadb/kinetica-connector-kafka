@@ -23,6 +23,7 @@ import org.apache.kafka.common.utils.AppInfoParser;
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.SchemaBuilder;
 import org.apache.kafka.connect.data.Struct;
+import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.source.SourceRecord;
 import org.apache.kafka.connect.source.SourceTask;
 import org.slf4j.Logger;
@@ -48,12 +49,12 @@ public class GPUdbSourceTask extends SourceTask {
     private static final Logger LOG = LoggerFactory.getLogger(GPUdbSourceTask.class);
 
     private LinkedBlockingQueue<SourceRecord> queue;
-    private Thread monitorThread;
+    private List<Thread> monitorThreads;
 
     @Override
     public void start(final Map<String, String> props) {
         final URL url;
-        final String tableName = props.get(GPUdbSourceConnector.TABLE_NAME_CONFIG);
+        final String[] tables = props.get(GPUdbSourceConnector.TABLE_NAMES_CONFIG).split(",");
 
         try {
             url = new URL(props.get(GPUdbSourceConnector.URL_CONFIG));
@@ -70,14 +71,16 @@ public class GPUdbSourceTask extends SourceTask {
                     .setPassword(props.get(GPUdbSourceConnector.PASSWORD_CONFIG))
                     .setTimeout(Integer.parseInt(props.get(GPUdbSourceConnector.TIMEOUT_CONFIG))));
 
-            // Get table info from /show/table.
+            for (String table : tables) {
+                // Get table info from /show/table.
 
-            ShowTableResponse tableInfo = gpudb.showTable(tableName, GPUdb.options(ShowTableRequest.Options.SHOW_CHILDREN, ShowTableRequest.Options.FALSE));
+                ShowTableResponse tableInfo = gpudb.showTable(table, GPUdb.options(ShowTableRequest.Options.SHOW_CHILDREN, ShowTableRequest.Options.FALSE));
 
-            // If the specified table is a collection, fail.
+                // If the specified table is a collection, fail.
 
-            if (tableInfo.getTableDescriptions().get(0).contains(ShowTableResponse.TableDescriptions.COLLECTION)) {
-                throw new IllegalArgumentException("Cannot create connector for collection " + tableName + ".");
+                if (tableInfo.getTableDescriptions().get(0).contains(ShowTableResponse.TableDescriptions.COLLECTION)) {
+                    throw new ConnectException("Cannot create connector for collection " + table + ".");
+                }
             }
 
             // Get the table monitor URL from /show/system/properties. If table
@@ -86,7 +89,7 @@ public class GPUdbSourceTask extends SourceTask {
             String zmqPortString = gpudb.showSystemProperties(GPUdb.options()).getPropertyMap().get(CONF_MONITOR_PORT);
 
             if (zmqPortString == null || zmqPortString.equals("-1")) {
-                throw new RuntimeException("Table monitor not supported.");
+                throw new ConnectException("Table monitor not supported.");
             }
 
             int zmqPort;
@@ -94,149 +97,153 @@ public class GPUdbSourceTask extends SourceTask {
             try {
                 zmqPort = Integer.parseInt(zmqPortString);
             } catch (Exception ex) {
-                throw new RuntimeException("Invalid table monitor port (" + zmqPortString + ").");
+                throw new ConnectException("Invalid table monitor port (" + zmqPortString + ").");
             }
 
             if (zmqPort < 1 || zmqPort > 65535) {
-                throw new RuntimeException("Invalid table monitor port (" + zmqPortString + ").");
+                throw new ConnectException("Invalid table monitor port (" + zmqPortString + ").");
             }
 
             zmqUrl = "tcp://" + url.getHost() + ":" + zmqPort;
         } catch (GPUdbException ex) {
-            throw new RuntimeException(ex);
+            throw new ConnectException(ex);
         }
 
         queue = new LinkedBlockingQueue<>();
+        monitorThreads = new ArrayList<>();
 
-        // Create a thread that will manage the table monitor and convert
-        // records from the monitor into source records and put them into the
-        // source record queue.
+        // Create a thread for each table that will manage the table monitor and
+        // convert records from the monitor into source records and put them
+        // into the source record queue.
 
-        monitorThread = new Thread() {
-            @Override
-            public void run() {
-                Type type;
-                String topicId;
+        for (final String table : tables) {
+            Thread monitorThread = new Thread() {
+                @Override
+                public void run() {
+                    Type type;
+                    String topicId;
 
-                try {
-                    // Create the table monitor.
+                    try {
+                        // Create the table monitor.
 
-                    CreateTableMonitorResponse response = gpudb.createTableMonitor(tableName, null);
-                    type = new Type(response.getTypeSchema());
-                    topicId = response.getTopicId();
-                } catch (GPUdbException ex) {
-                    LOG.error("Could not create table monitor for " + tableName + " at " + url + ".", ex);
-                    return;
-                }
-
-                // Create a Kafka schema from the table type.
-
-                SchemaBuilder builder = SchemaBuilder.struct().name(tableName).version(1);
-
-                for (Column column : type.getColumns())
-                {
-                    Schema fieldSchema;
-
-                    if (column.getType() == ByteBuffer.class) {
-                        fieldSchema = Schema.BYTES_SCHEMA;
-                    } else if (column.getType() == Double.class) {
-                        fieldSchema = Schema.FLOAT64_SCHEMA;
-                    } else if (column.getType() == Float.class) {
-                        fieldSchema = Schema.FLOAT32_SCHEMA;
-                    } else if (column.getType() == Integer.class) {
-                        fieldSchema = Schema.INT32_SCHEMA;
-                    } else if (column.getType() == Long.class) {
-                        fieldSchema = Schema.INT64_SCHEMA;
-                    } else if (column.getType() == String.class) {
-                        fieldSchema = Schema.STRING_SCHEMA;
-                    } else {
-                        LOG.error("Unknown column type " + column.getType().getName() + ".");
+                        CreateTableMonitorResponse response = gpudb.createTableMonitor(table, null);
+                        type = new Type(response.getTypeSchema());
+                        topicId = response.getTopicId();
+                    } catch (GPUdbException ex) {
+                        LOG.error("Could not create table monitor for " + table + " at " + url + ".", ex);
                         return;
                     }
 
-                    builder = builder.field(column.getName(), fieldSchema);
-                }
+                    // Create a Kafka schema from the table type.
 
-                Schema schema = builder.build();
+                    SchemaBuilder builder = SchemaBuilder.struct().name(table).version(1);
 
-                // Subscribe to the ZMQ topic for the table monitor.
+                    for (Column column : type.getColumns())
+                    {
+                        Schema fieldSchema;
 
-                try (ZMQ.Context zmqContext = ZMQ.context(1); ZMQ.Socket subscriber = zmqContext.socket(ZMQ.SUB)) {
-                    subscriber.connect(zmqUrl);
-                    subscriber.subscribe(topicId.getBytes());
-                    subscriber.setReceiveTimeOut(1000);
-
-                    // Loop until the thread is interrupted when the task is
-                    // stopped.
-
-                    long recordNumber = 0;
-
-                    while (!Thread.currentThread().isInterrupted()) {
-                        // Check for a ZMQ message; if none was received within
-                        // the timeout window continue waiting.
-
-                        ZMsg message = ZMsg.recvMsg(subscriber);
-
-                        if (message == null) {
-                            continue;
+                        if (column.getType() == ByteBuffer.class) {
+                            fieldSchema = Schema.BYTES_SCHEMA;
+                        } else if (column.getType() == Double.class) {
+                            fieldSchema = Schema.FLOAT64_SCHEMA;
+                        } else if (column.getType() == Float.class) {
+                            fieldSchema = Schema.FLOAT32_SCHEMA;
+                        } else if (column.getType() == Integer.class) {
+                            fieldSchema = Schema.INT32_SCHEMA;
+                        } else if (column.getType() == Long.class) {
+                            fieldSchema = Schema.INT64_SCHEMA;
+                        } else if (column.getType() == String.class) {
+                            fieldSchema = Schema.STRING_SCHEMA;
+                        } else {
+                            LOG.error("Unknown column type " + column.getType().getName() + ".");
+                            return;
                         }
 
-                        boolean skip = true;
+                        builder = builder.field(column.getName(), fieldSchema);
+                    }
 
-                        for (ZFrame frame : message) {
-                            // Skip the first frame (which just contains the
-                            // topic ID).
+                    Schema schema = builder.build();
 
-                            if (skip) {
-                                skip = false;
+                    // Subscribe to the ZMQ topic for the table monitor.
+
+                    try (ZMQ.Context zmqContext = ZMQ.context(1); ZMQ.Socket subscriber = zmqContext.socket(ZMQ.SUB)) {
+                        subscriber.connect(zmqUrl);
+                        subscriber.subscribe(topicId.getBytes());
+                        subscriber.setReceiveTimeOut(1000);
+
+                        // Loop until the thread is interrupted when the task is
+                        // stopped.
+
+                        long recordNumber = 0;
+
+                        while (!Thread.currentThread().isInterrupted()) {
+                            // Check for a ZMQ message; if none was received within
+                            // the timeout window continue waiting.
+
+                            ZMsg message = ZMsg.recvMsg(subscriber);
+
+                            if (message == null) {
                                 continue;
                             }
 
-                            // Create a source record for each record and put it
-                            // into the source record queue.
+                            boolean skip = true;
 
-                            GenericRecord record = Avro.decode(type, ByteBuffer.wrap(frame.getData()));
-                            Struct struct = new Struct(schema);
+                            for (ZFrame frame : message) {
+                                // Skip the first frame (which just contains the
+                                // topic ID).
 
-                            for (Column column : type.getColumns()) {
-                                Object value = record.get(column.getName());
-
-                                if (value instanceof ByteBuffer) {
-                                    value = ((ByteBuffer)value).array();
+                                if (skip) {
+                                    skip = false;
+                                    continue;
                                 }
 
-                                struct.put(column.getName(), value);
+                                // Create a source record for each record and put it
+                                // into the source record queue.
+
+                                GenericRecord record = Avro.decode(type, ByteBuffer.wrap(frame.getData()));
+                                Struct struct = new Struct(schema);
+
+                                for (Column column : type.getColumns()) {
+                                    Object value = record.get(column.getName());
+
+                                    if (value instanceof ByteBuffer) {
+                                        value = ((ByteBuffer)value).array();
+                                    }
+
+                                    struct.put(column.getName(), value);
+                                }
+
+                                queue.add(new SourceRecord(
+                                        Collections.singletonMap("table", table),
+                                        Collections.singletonMap("record", recordNumber),
+                                        props.get(GPUdbSourceConnector.TOPIC_PREFIX_CONFIG) + table,
+                                        Schema.INT64_SCHEMA,
+                                        recordNumber,
+                                        schema,
+                                        struct
+                                ));
+
+                                recordNumber++;
                             }
-
-                            queue.add(new SourceRecord(
-                                    Collections.singletonMap("table", tableName),
-                                    Collections.singletonMap("record", recordNumber),
-                                    props.get(GPUdbSourceConnector.TOPIC_CONFIG),
-                                    Schema.INT64_SCHEMA,
-                                    recordNumber,
-                                    schema,
-                                    struct
-                            ));
-
-                            recordNumber++;
                         }
+                    } catch (Exception ex) {
+                        LOG.error("Could not access table monitor for " + table + " at " + zmqUrl + ".", ex);
                     }
-                } catch (Exception ex) {
-                    LOG.error("Could not access table monitor for " + tableName + " at " + zmqUrl + ".", ex);
+
+                    // The task has been stopped (or something failed) so clear the
+                    // table monitor.
+
+                    try {
+                        gpudb.clearTableMonitor(topicId, null);
+                    } catch (GPUdbException ex) {
+                        LOG.error("Could not clear table monitor for " + table + " at " + url + ".", ex);
+                    }
                 }
+            };
 
-                // The task has been stopped (or something failed) so clear the
-                // table monitor.
-
-                try {
-                    gpudb.clearTableMonitor(topicId, null);
-                } catch (GPUdbException ex) {
-                    LOG.error("Could not clear table monitor for " + tableName + " at " + url + ".", ex);
-                }
-            }
-        };
-
-        monitorThread.start();
+            monitorThread.start();
+            monitorThreads.add(monitorThread);
+        }
     }
 
     @Override
@@ -260,13 +267,17 @@ public class GPUdbSourceTask extends SourceTask {
 
     @Override
     public void stop() {
-        // Interrupt the monitor thread and wait for it to terminate.
+        // Interrupt the monitor threads and wait for them to terminate.
 
-        monitorThread.interrupt();
+        for (Thread monitorThread : monitorThreads) {
+            monitorThread.interrupt();
+        }
 
-        try {
-            monitorThread.join();
-        } catch (Exception ex) {
+        for (Thread monitorThread : monitorThreads) {
+            try {
+                monitorThread.join();
+            } catch (Exception ex) {
+            }
         }
     }
 

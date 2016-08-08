@@ -20,9 +20,9 @@ The two connector classes that integrate *GPUdb* with *Kafka* are:
 ``com.gpudb.kafka``
 
 * ``GPUdbSourceConnector`` - A *Kafka Source Connector*, which receives a data
-stream from a *GPUdb* table monitor
+  stream from a *GPUdb* table monitor
 * ``GPUdbSinkConnector`` - A *Kafka Sink Connector*, which receives a data
-stream from a *Kafka Source Connector* and writes it to *GPUdb*
+  stream from a *Kafka Source Connector* and writes it to *GPUdb*
 
 
 -----
@@ -33,7 +33,8 @@ Streaming Data from GPUdb into Kafka
 
 The ``GPUdbSourceConnector`` can be used as-is by *Kafka Connect* to stream
 data from *GPUdb* into *Kafka*. Data will be streamed in flat *Kafka Connect*
-``Struct`` format with one field for each table column.
+``Struct`` format with one field for each table column.  A separate *Kafka*
+topic will be created for each *GPUdb* table configured.
 
 The ``GPUdbSourceConnector`` is configured using a properties file that
 accepts the following parameters:
@@ -42,8 +43,11 @@ accepts the following parameters:
 * ``gpudb.username`` (optional): Username for authentication
 * ``gpudb.password`` (optional): Password for authentication
 * ``gpudb.timeout`` (optional): Timeout in milliseconds 
-* ``gpudb.table_name``: The name of the table in *GPUdb* to stream from
-* ``topic``: The *Kafka* topic name
+* ``gpudb.table_names``: A comma-delimited list of names of tables in *GPUdb* to
+  stream from
+* ``topic_prefix``: The token that will be prepended to the name of each table
+  to form the name of the corresponding *Kafka* topic into which records will be
+  queued
 
 
 -----
@@ -70,6 +74,7 @@ accepts the following parameters:
 * ``gpudb.collection_name`` (optional): Collection to put the table in
 * ``gpudb.table_name``: The name of the table in *GPUdb* to stream to
 * ``gpudb.batch_size``: The number of records to insert at one time
+* ``topics``: *Kafka* parameter specifying which topics will be used as sources
 
 
 -----
@@ -97,19 +102,18 @@ To install the connector:
         name=<UniqueNameOfSourceConnector>
         connector.class=com.gpudb.kafka.GPUdbSourceConnector
         tasks.max=1
-        topic=<GPUdbKafkaTopicName>
         gpudb.url=<GPUdbServiceURL>
         gpudb.username=<GPUdbAuthenticatingUserName>
         gpudb.password=<GPUdbAuthenticatingUserPassword>
-        gpudb.table_name=<GPUdbSourceTableName>
+        gpudb.table_names=<GPUdbSourceTableNameA,GPUdbSourceTableNameB>
         gpudb.timeout=<GPUdbConnectionTimeoutInSeconds>
+        topic_prefix=<TargetKafkaTopicNamesPrefix>
 
 * Create a configuration file (``sink.properties``) for the sink connector::
 
         name=<UniqueNameOfSinkConnector>
         connector.class=com.gpudb.kafka.GPUdbSinkConnector
         tasks.max=<NumberOfKafkaToGPUdbWritingProcesses>
-        topics=<GPUdbKafkaTopicName>
         gpudb.url=<GPUdbServiceURL>
         gpudb.username=<GPUdbAuthenticatingUserName>
         gpudb.password=<GPUdbAuthenticatingUserPassword>
@@ -117,6 +121,7 @@ To install the connector:
         gpudb.table_name=<GPUdbTargetTableName>
         gpudb.timeout=<GPUdbConnectionTimeoutInSeconds>
         gpudb.batch_size=<NumberOfRecordsToBatchBeforeInsert>
+        topics=<SourceKafkaTopicNames>
 
 
 -----
@@ -133,22 +138,22 @@ streaming into it.
 
 * Create a configuration file (``source.properties``) for the source connector::
 
-        name=TwitterSource
+        name=TwitterSourceConnector
         connector.class=com.gpudb.kafka.GPUdbSourceConnector
         tasks.max=1
         gpudb.url=http://localhost:9191
-        gpudb.table_name=TwitterSource
-        topic=TwitterTopic
+        gpudb.table_names=TwitterSource
+        topic_prefix=Tweets.
 
 * Create a configuration file (``sink.properties``) for the sink connector::
 
-        name=TwitterSink
+        name=TwitterSinkConnector
         connector.class=com.gpudb.kafka.GPUdbSinkConnector
         tasks.max=4
         gpudb.url=http://localhost:9191
         gpudb.table_name=TwitterTarget
         gpudb.batch_size=10
-        topics=TwitterTopic
+        topics=Tweets.TwitterSource
 
 * Make sure the CLASSPATH environment variable includes the directory
   containing the *GPUdb Kafka Connector* jar::
