@@ -18,6 +18,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.logging.Level;
+import org.apache.kafka.common.errors.InterruptException;
 
 import org.apache.kafka.common.utils.AppInfoParser;
 import org.apache.kafka.connect.data.Schema;
@@ -131,7 +133,7 @@ public class GPUdbSourceTask extends SourceTask {
                         topicId = response.getTopicId();
                     } catch (GPUdbException ex) {
                         LOG.error("Could not create table monitor for " + table + " at " + url + ".", ex);
-                        return;
+                        throw new ConnectException(ex);
                     }
 
                     // Create a Kafka schema from the table type.
@@ -228,6 +230,7 @@ public class GPUdbSourceTask extends SourceTask {
                         }
                     } catch (Exception ex) {
                         LOG.error("Could not access table monitor for " + table + " at " + zmqUrl + ".", ex);
+                        throw new ConnectException(ex);
                     }
 
                     // The task has been stopped (or something failed) so clear the
@@ -237,6 +240,7 @@ public class GPUdbSourceTask extends SourceTask {
                         gpudb.clearTableMonitor(topicId, null);
                     } catch (GPUdbException ex) {
                         LOG.error("Could not clear table monitor for " + table + " at " + url + ".", ex);
+                        throw new ConnectException(ex);
                     }
                 }
             };
@@ -265,6 +269,10 @@ public class GPUdbSourceTask extends SourceTask {
         return result;
     }
 
+    /**
+     *
+     * @throws Exception
+     */
     @Override
     public void stop() {
         // Interrupt the monitor threads and wait for them to terminate.
@@ -276,7 +284,7 @@ public class GPUdbSourceTask extends SourceTask {
         for (Thread monitorThread : monitorThreads) {
             try {
                 monitorThread.join();
-            } catch (Exception ex) {
+            } catch (InterruptedException ex) {
             }
         }
     }

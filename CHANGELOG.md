@@ -1,6 +1,11 @@
 GPUdb Kafka Connector Changelog
 ===============================
 
+Version 5.2.0 - 2016-10-19
+-   Changed configuration to use ConfigDef
+-   Failures are propagated to the framework
+-   System test was added
+
 Version 5.2.0 - 2016-07-08
 --------------------------
 

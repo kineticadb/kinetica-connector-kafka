@@ -48,7 +48,7 @@ public class GPUdbSinkTask extends SinkTask {
     public void start(Map<String, String> props) {
         config = new HashMap<>(props);
     }
-
+    
     @Override
     public void put(Collection<SinkRecord> sinkRecords) {
         if (sinkRecords.isEmpty()) {
@@ -67,6 +67,7 @@ public class GPUdbSinkTask extends SinkTask {
             GPUdb gpudb;
 
             try {
+                
                 gpudb = new GPUdb(url, new GPUdb.Options()
                         .setUsername(config.get(GPUdbSinkConnector.USERNAME_CONFIG))
                         .setPassword(config.get(GPUdbSinkConnector.PASSWORD_CONFIG))
