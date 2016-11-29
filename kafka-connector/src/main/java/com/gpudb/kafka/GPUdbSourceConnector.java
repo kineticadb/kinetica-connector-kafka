@@ -9,7 +9,6 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.kafka.common.config.ConfigDef;
-import org.apache.kafka.common.config.ConfigDef.Range;
 import org.apache.kafka.common.utils.AppInfoParser;
 import org.apache.kafka.connect.connector.Task;
 import org.apache.kafka.connect.source.SourceConnector;
@@ -39,13 +38,6 @@ public class GPUdbSourceConnector extends SourceConnector {
     private static final String DEFAULT_TIMEOUT = "0";
 
     private Map<String, String> config;
-    public static ConfigDef CONFIG_DEF = new ConfigDef()
-                .define(URL_CONFIG, ConfigDef.Type.STRING, ConfigDef.Importance.HIGH, "GPUdb URL, e.g. 'http://localhost:9191'","GPUdb Properties",1,ConfigDef.Width.LONG,"GPUdb URL")
-                .define(TIMEOUT_CONFIG, ConfigDef.Type.INT,DEFAULT_TIMEOUT,Range.atLeast(0), ConfigDef.Importance.HIGH, "GPUdb timeout (ms) (optional, default " + DEFAULT_TIMEOUT + "); 0 = no timeout","GPUdb Properties",2,ConfigDef.Width.SHORT,"Timeout")
-                .define(TABLE_NAMES_CONFIG, ConfigDef.Type.STRING, ConfigDef.Importance.HIGH, "GPUdb table names (comma-separated)","GPUdb Properties",3,ConfigDef.Width.LONG,"Table Names")
-                .define(TOPIC_PREFIX_CONFIG, ConfigDef.Type.STRING, ConfigDef.Importance.HIGH, "Kafka topic prefix","GPUdb Properties",4,ConfigDef.Width.SHORT,"Topic Prefix")
-                .define(USERNAME_CONFIG, ConfigDef.Type.STRING, "",ConfigDef.Importance.HIGH, "GPUdb username (optional)","GPUdb Properties",5,ConfigDef.Width.SHORT,"Username")
-                .define(PASSWORD_CONFIG, ConfigDef.Type.STRING, "",ConfigDef.Importance.HIGH, "GPUdb password (optional)","GPUdb Properties",6,ConfigDef.Width.SHORT,"Password");
 
     @Override
     public String version() {
@@ -55,17 +47,60 @@ public class GPUdbSourceConnector extends SourceConnector {
     @Override
     @SuppressWarnings("ResultOfObjectAllocationIgnored")
     public void start(Map<String, String> props) {
-        Map<String,Object> configParsed = GPUdbSourceConnector.CONFIG_DEF.parse(props); 
-        config = new HashMap<String,String>();
-        for (Map.Entry<String, Object> entry : configParsed.entrySet()) {
-            config.put(entry.getKey(), entry.getValue().toString());
-        }        
+        config = new HashMap<>();
+
+        if (!props.containsKey(URL_CONFIG))
+        {
+            throw new IllegalArgumentException("Missing URL.");
+        }
 
         try {
             new URL(props.get(URL_CONFIG));
         } catch (MalformedURLException ex) {
             throw new IllegalArgumentException("Invalid URL (" + props.get(URL_CONFIG) + ").");
         }
+
+        config.put(URL_CONFIG, props.get(URL_CONFIG));
+
+        if (props.containsKey(USERNAME_CONFIG)) {
+            config.put(USERNAME_CONFIG, props.get(USERNAME_CONFIG));
+        } else {
+            config.put(USERNAME_CONFIG, "");
+        }
+
+        if (props.containsKey(PASSWORD_CONFIG)) {
+            config.put(PASSWORD_CONFIG, props.get(PASSWORD_CONFIG));
+        } else {
+            config.put(PASSWORD_CONFIG, "");
+        }
+
+        if (props.containsKey(TIMEOUT_CONFIG)) {
+            try {
+                if (Integer.parseInt(props.get(TIMEOUT_CONFIG)) < 0) {
+                    throw new Exception();
+                }
+            } catch (Exception ex) {
+                throw new IllegalArgumentException("Invalid timeout (" + props.get(TIMEOUT_CONFIG) + ").");
+            }
+
+            config.put(TIMEOUT_CONFIG, props.get(TIMEOUT_CONFIG));
+        } else {
+            config.put(TIMEOUT_CONFIG, DEFAULT_TIMEOUT);
+        }
+
+        if (!props.containsKey(TABLE_NAMES_CONFIG))
+        {
+            throw new IllegalArgumentException("Missing table names.");
+        }
+
+        config.put(TABLE_NAMES_CONFIG, props.get(TABLE_NAMES_CONFIG));
+
+        if (!props.containsKey(TOPIC_PREFIX_CONFIG))
+        {
+            throw new IllegalArgumentException("Missing topic.");
+        }
+
+        config.put(TOPIC_PREFIX_CONFIG, props.get(TOPIC_PREFIX_CONFIG));
     }
 
     @Override
@@ -103,6 +138,12 @@ public class GPUdbSourceConnector extends SourceConnector {
 
     @Override
     public ConfigDef config() {
-        return(CONFIG_DEF);
+        return new ConfigDef()
+                .define(URL_CONFIG, ConfigDef.Type.STRING, ConfigDef.Importance.HIGH, "GPUdb URL, e.g. 'http://localhost:9191'")
+                .define(USERNAME_CONFIG, ConfigDef.Type.STRING, ConfigDef.Importance.HIGH, "GPUdb username (optional)")
+                .define(PASSWORD_CONFIG, ConfigDef.Type.STRING, ConfigDef.Importance.HIGH, "GPUdb password (optional)")
+                .define(TIMEOUT_CONFIG, ConfigDef.Type.INT, ConfigDef.Importance.HIGH, "GPUdb timeout (ms) (optional, default " + DEFAULT_TIMEOUT + "); 0 = no timeout")
+                .define(TABLE_NAMES_CONFIG, ConfigDef.Type.STRING, ConfigDef.Importance.HIGH, "GPUdb table names (comma-separated)")
+                .define(TOPIC_PREFIX_CONFIG, ConfigDef.Type.STRING, ConfigDef.Importance.HIGH, "Kafka topic prefix");
     }
 }
