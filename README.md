@@ -76,7 +76,7 @@ accepts the following parameters:
 * ``gpudb.batch_size``: The number of records to insert at one time
 * ``topics``: *Kafka* parameter specifying which topics will be used as sources
 
-In the connect-standalone.properties file, add the line::
+In the connect-standalone.properties file, add the line:
   
     value.converter.schemas.enable=true
   
