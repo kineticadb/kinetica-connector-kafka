@@ -78,7 +78,7 @@ accepts the following parameters:
 
 In the connect-standalone.properties file, add the line::
   
-  value.converter.schemas.enable=true
+    value.converter.schemas.enable=true
   
 -----
 
