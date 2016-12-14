@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.kafka.common.config.ConfigDef;
+import org.apache.kafka.common.config.ConfigDef.Range;
 import org.apache.kafka.common.utils.AppInfoParser;
 import org.apache.kafka.connect.connector.Task;
 import org.apache.kafka.connect.sink.SinkConnector;
@@ -34,10 +35,19 @@ public class GPUdbSinkConnector extends SinkConnector {
     /** Config file key for # of records to collect before writing to GPUdb */
     public static final String BATCH_SIZE_CONFIG = "gpudb.batch_size";
 
-    private static final String DEFAULT_TIMEOUT = "0";
-    private static final String DEFAULT_BATCH_SIZE = "10000";
+    public static final String DEFAULT_TIMEOUT = "1000";
+    public static final String DEFAULT_BATCH_SIZE = "10000";
 
     private Map<String, String> config;
+    public static ConfigDef CONFIG_DEF =  new ConfigDef()
+                .define(URL_CONFIG, ConfigDef.Type.STRING, ConfigDef.Importance.HIGH, "GPUdb URL, e.g. 'http://localhost:9191'","GPUdb Properties",1,ConfigDef.Width.SHORT,"GPUdb URL")
+                .define(TIMEOUT_CONFIG, ConfigDef.Type.INT, DEFAULT_TIMEOUT, Range.atLeast(0),ConfigDef.Importance.HIGH, "GPUdb timeout (ms) (optional, default " + DEFAULT_TIMEOUT + "); 0 = no timeout","GPUdb Properties",2,ConfigDef.Width.SHORT,"Timeout")
+                .define(COLLECTION_NAME_CONFIG, ConfigDef.Type.STRING, "",ConfigDef.Importance.HIGH, "GPUdb collection name (optional, default--no collection name)","GPUdb Properties",3,ConfigDef.Width.LONG,"Collection Name")
+                .define(TABLE_NAME_CONFIG, ConfigDef.Type.STRING, ConfigDef.Importance.HIGH, "GPUdb table name","GPUdb Properties",4,ConfigDef.Width.LONG,"Table Name")
+                .define(USERNAME_CONFIG, ConfigDef.Type.STRING, "", ConfigDef.Importance.HIGH, "GPUdb username (optional)","GPUdb Properties",5,ConfigDef.Width.SHORT,"Username")
+                .define(PASSWORD_CONFIG, ConfigDef.Type.STRING, "", ConfigDef.Importance.HIGH, "GPUdb password (optional)","GPUdb Properties",6,ConfigDef.Width.SHORT,"Password")
+                .define(BATCH_SIZE_CONFIG, ConfigDef.Type.INT, DEFAULT_BATCH_SIZE, Range.atLeast(1), ConfigDef.Importance.HIGH, "GPUdb batch size (optional, default " + DEFAULT_BATCH_SIZE + ")","GPUdb Properties",7,ConfigDef.Width.SHORT,"Batch Size");
+
 
     @Override
     public String version() {
@@ -46,12 +56,11 @@ public class GPUdbSinkConnector extends SinkConnector {
 
     @Override
     public void start(Map<String, String> props) {
-        config = new HashMap<>();
-
-        if (!props.containsKey(URL_CONFIG))
-        {
-            throw new IllegalArgumentException("Missing URL.");
-        }
+        Map<String,Object> configParsed = GPUdbSinkConnector.CONFIG_DEF.parse(props); 
+        config = new HashMap<String,String>();
+        for (Map.Entry<String, Object> entry : configParsed.entrySet()) {
+            config.put(entry.getKey(), entry.getValue().toString());
+        }        
 
         try {
             new URL(props.get(URL_CONFIG));
@@ -59,59 +68,6 @@ public class GPUdbSinkConnector extends SinkConnector {
             throw new IllegalArgumentException("Invalid URL (" + props.get(URL_CONFIG) + ").");
         }
 
-        config.put(URL_CONFIG, props.get(URL_CONFIG));
-
-        if (props.containsKey(USERNAME_CONFIG)) {
-            config.put(USERNAME_CONFIG, props.get(USERNAME_CONFIG));
-        } else {
-            config.put(USERNAME_CONFIG, "");
-        }
-
-        if (props.containsKey(PASSWORD_CONFIG)) {
-            config.put(PASSWORD_CONFIG, props.get(PASSWORD_CONFIG));
-        } else {
-            config.put(PASSWORD_CONFIG, "");
-        }
-
-        if (props.containsKey(TIMEOUT_CONFIG)) {
-            try {
-                if (Integer.parseInt(props.get(TIMEOUT_CONFIG)) < 0) {
-                    throw new Exception();
-                }
-            } catch (Exception ex) {
-                throw new IllegalArgumentException("Invalid timeout (" + props.get(TIMEOUT_CONFIG) + ").");
-            }
-
-            config.put(TIMEOUT_CONFIG, props.get(TIMEOUT_CONFIG));
-        } else {
-            config.put(TIMEOUT_CONFIG, DEFAULT_TIMEOUT);
-        }
-
-        if (props.containsKey(COLLECTION_NAME_CONFIG)) {
-            config.put(COLLECTION_NAME_CONFIG, props.get(COLLECTION_NAME_CONFIG));
-        } else {
-            config.put(COLLECTION_NAME_CONFIG, "");
-        }
-
-        if (!props.containsKey(TABLE_NAME_CONFIG)) {
-            throw new IllegalArgumentException("Missing table name.");
-        }
-
-        config.put(TABLE_NAME_CONFIG, props.get(TABLE_NAME_CONFIG));
-
-        if (props.containsKey(BATCH_SIZE_CONFIG)) {
-            try {
-                if (Integer.parseInt(props.get(BATCH_SIZE_CONFIG)) < 1) {
-                    throw new Exception();
-                }
-            } catch (Exception ex) {
-                throw new IllegalArgumentException("Invalid batch size (" + props.get(BATCH_SIZE_CONFIG) + ").");
-            }
-
-            config.put(BATCH_SIZE_CONFIG, props.get(BATCH_SIZE_CONFIG));
-        } else {
-            config.put(BATCH_SIZE_CONFIG, DEFAULT_BATCH_SIZE);
-        }
     }
 
     @Override
@@ -126,7 +82,6 @@ public class GPUdbSinkConnector extends SinkConnector {
         for (int i = 0; i < maxTasks; i++) {
             taskConfigs.add(new HashMap<>(config));
         }
-
         return taskConfigs;
     }
 
@@ -136,13 +91,6 @@ public class GPUdbSinkConnector extends SinkConnector {
 
     @Override
     public ConfigDef config() {
-        return new ConfigDef()
-                .define(URL_CONFIG, ConfigDef.Type.STRING, ConfigDef.Importance.HIGH, "GPUdb URL, e.g. 'http://localhost:9191'")
-                .define(USERNAME_CONFIG, ConfigDef.Type.STRING, ConfigDef.Importance.HIGH, "GPUdb username (optional)")
-                .define(PASSWORD_CONFIG, ConfigDef.Type.STRING, ConfigDef.Importance.HIGH, "GPUdb password (optional)")
-                .define(TIMEOUT_CONFIG, ConfigDef.Type.INT, ConfigDef.Importance.HIGH, "GPUdb timeout (ms) (optional, default " + DEFAULT_TIMEOUT + "); 0 = no timeout")
-                .define(COLLECTION_NAME_CONFIG, ConfigDef.Type.STRING, ConfigDef.Importance.HIGH, "GPUdb collection name (optional, default--no collection name)")
-                .define(TABLE_NAME_CONFIG, ConfigDef.Type.STRING, ConfigDef.Importance.HIGH, "GPUdb table name")
-                .define(BATCH_SIZE_CONFIG, ConfigDef.Type.INT, ConfigDef.Importance.HIGH, "GPUdb batch size (optional, default " + DEFAULT_BATCH_SIZE + ")");
+        return(GPUdbSinkConnector.CONFIG_DEF);
     }
 }

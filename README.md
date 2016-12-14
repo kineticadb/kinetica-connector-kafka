@@ -49,6 +49,9 @@ accepts the following parameters:
   to form the name of the corresponding *Kafka* topic into which records will be
   queued
 
++In the connect-standalone.properties file, add the line:
+   
+     value.converter.schemas.enable=true
 
 -----
 
@@ -121,20 +124,18 @@ To install the connector:
         gpudb.table_name=<GPUdbTargetTableName>
         gpudb.timeout=<GPUdbConnectionTimeoutInSeconds>
         gpudb.batch_size=<NumberOfRecordsToBatchBeforeInsert>
-        topics=<SourceKafkaTopicNames>
+        topics=<TopicPrefix><SourceTableName>
 
 
------
+-------------
 
+System Test
+-------------
 
-Example
--------
+This test will demonstrate the *GPUdb Kafka Connector* source and sink in standalone mode.
+First, you will need to create source and sink configuration files as shown below::
 
-This example will demonstrate the *Kinetica Kafka Connector* in standalone mode.
-It assumes the presence of a ``TwitterSource`` table in *Kinetica* that has records
-streaming into it.
-
-* Start Kafka locally
+*Note: These files assume GPUdb is being run on your local host.  If it is not, replace the URL with the correct location of GPUdb*
 
 * Create a configuration file (``source.properties``) for the source connector::
 
@@ -142,8 +143,10 @@ streaming into it.
         connector.class=com.gpudb.kafka.GPUdbSourceConnector
         tasks.max=1
         gpudb.url=http://localhost:9191
-        gpudb.table_names=TwitterSource
+        gpudb.table_names=KafkaConnectorTest
+        gpudb.timeout=1000
         topic_prefix=Tweets.
+        
 
 * Create a configuration file (``sink.properties``) for the sink connector::
 
@@ -151,18 +154,30 @@ streaming into it.
         connector.class=com.gpudb.kafka.GPUdbSinkConnector
         tasks.max=4
         gpudb.url=http://localhost:9191
-        gpudb.table_name=TwitterTarget
-        gpudb.batch_size=10
-        topics=Tweets.TwitterSource
+        gpudb.table_name=TwitterDest
+        gpudb.timeout=1000
+        gpudb.batch_size=100
+        topics=Tweets.KafkaConnectorTest
+        
 
-* Make sure the CLASSPATH environment variable includes the directory
-  containing the *Kinetica Kafka Connector* jar::
+     
 
-        export CLASSPATH=<GPUdbKafkaConnectorDirectory>/*
+     
+The rest of this system test will require three terminal windows.
 
-* Run *Kafka Connect* from the *Kafka* installation directory:
+* In terminal 1, start zookeeper and kafka
+    1.  change directory to kafka directory
+    2.  bin/zookeeper-server-start.sh config/zookeeper.properties &
+    3.  bin/kafka-server-start.sh config/server.properties
+        
+* In terminal 2, start test datapump
+    
+    ''java -cp kafka-connector-1.0-jar-with-dependencies.jar com.gpudb.kafka.tests.TestDataPump <gpudb url>''
 
-        bin/connect-standalone.sh config/connect-standalone.properties source.properties sink.properties
+* In terminal 3, start kafka-GPUdb connector
+    
+    1. export CLASSPATH=<path to kafka-connector-1.0-jar-with-dependencies.jar>
+    2. change directory to kafka directory
+    3. bin/connect-standalone.sh config/connect-standalone.properties <source.properties> <sink.properties>
 
-This will stream data as it is inserted into the ``TwitterSource`` table into
-the ``TwitterTarget`` table via *Kafka Connect*.
+
