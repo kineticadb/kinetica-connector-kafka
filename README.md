@@ -49,7 +49,7 @@ accepts the following parameters:
   to form the name of the corresponding *Kafka* topic into which records will be
   queued
 
-In the connect-standalone.properties file, add the line:
++In the connect-standalone.properties file, add the line:
    
      value.converter.schemas.enable=true
 
