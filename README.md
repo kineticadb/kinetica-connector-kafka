@@ -169,16 +169,16 @@ The rest of this system test will require three terminal windows.
 
 * In terminal 1, start *zookeeper* and *kafka*::
 
-		``cd <path/to/Kafka>``
-		``bin/zookeeper-server-start.sh config/zookeeper.properties &``
-		``bin/kafka-server-start.sh config/server.properties``
+		cd <path/to/Kafka>
+		bin/zookeeper-server-start.sh config/zookeeper.properties &
+		bin/kafka-server-start.sh config/server.properties
         
 * In terminal 2, start test datapump::
     
-		``java -cp kafka-connector-6.0.0-jar-with-dependencies.jar com.gpudb.kafka.tests.TestDataPump <gpudb url>``
+		java -cp kafka-connector-6.0.0-jar-with-dependencies.jar com.gpudb.kafka.tests.TestDataPump <gpudb url>
 
 * In terminal 3, start kafka connector::
 
-		``export CLASSPATH=<path/to/kafka-connector-6.0.0-jar-with-dependencies.jar>``
-		``cd <path/to/Kafka>``
-		``bin/connect-standalone.sh config/connect-standalone.properties <source.properties> <sink.properties>``
+		export CLASSPATH=<path/to/kafka-connector-6.0.0-jar-with-dependencies.jar>
+		cd <path/to/Kafka>
+		bin/connect-standalone.sh config/connect-standalone.properties <source.properties> <sink.properties>
