@@ -173,12 +173,11 @@ The rest of this system test will require three terminal windows.
 * In terminal 2, start test datapump
     
     ''java -cp kafka-connector-1.0-jar-with-dependencies.jar com.gpudb.kafka.tests.TestDataPump <gpudb url>''
- ''
+
 * In terminal 3, start kafka-GPUdb connector
     
-    1. ''export CLASSPATH=<path to kafka-connector-1.0-jar-with-dependencies.jar>''
+    1. ``export CLASSPATH=<path to kafka-connector-1.0-jar-with-dependencies.jar>``
     2. change directory to kafka directory
-    3. ''bin/connect-standalone.sh config/connect-standalone.properties <source.properties> <sink.properties>''
+    3. ``bin/connect-standalone.sh config/connect-standalone.properties <source.properties> <sink.properties>``
 
 
-''
