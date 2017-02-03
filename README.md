@@ -49,9 +49,6 @@ accepts the following parameters:
   to form the name of the corresponding *Kafka* topic into which records will be
   queued
 
-Note: This connector does not permit schema-less SinkRecords.  You, therefore, must add the following line to the connect-standalone.properties file before running connect-standalone.sh:
-   
-     value.converter.schemas.enable=true
 
 -----
 
@@ -78,6 +75,10 @@ accepts the following parameters:
 * ``gpudb.batch_size``: The number of records to insert at one time
 * ``topics``: *Kafka* parameter specifying which topics will be used as sources
 
+
+Note: This connector does not permit schema-less SinkRecords.  You, therefore, must add the following line to the connect-standalone.properties file before running connect-standalone.sh:
+   
+     value.converter.schemas.enable=true
 
 -----
 
