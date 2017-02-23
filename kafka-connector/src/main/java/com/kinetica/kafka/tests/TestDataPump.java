@@ -1,4 +1,4 @@
-package com.gpudb.kafka.tests;
+package com.kinetica.kafka.tests;
 
 import com.gpudb.GPUdb;
 import com.gpudb.GPUdbException;
@@ -10,7 +10,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * Pump data into GPUdb to be used as a Kafka connector source
+ * Pump data into Kinetica to be used as a Kafka connector source
  * @author dkatz
  */
 public class TestDataPump {

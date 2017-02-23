@@ -17,11 +17,11 @@ Connector Classes
 
 The two connector classes that integrate *Kinetica* with *Kafka* are:
 
-``com.gpudb.kafka``
+``com.kinetica.kafka``
 
-* ``GPUdbSourceConnector`` - A *Kafka Source Connector*, which receives a data
+* ``KineticaSourceConnector`` - A *Kafka Source Connector*, which receives a data
   stream from the database via table monitor
-* ``GPUdbSinkConnector`` - A *Kafka Sink Connector*, which receives a data
+* ``KineticaSinkConnector`` - A *Kafka Sink Connector*, which receives a data
   stream from a *Kafka Source Connector* and writes it to the database
 
 
@@ -31,19 +31,19 @@ The two connector classes that integrate *Kinetica* with *Kafka* are:
 Streaming Data from Kinetica into Kafka
 ---------------------------------------
 
-The ``GPUdbSourceConnector`` can be used as-is by *Kafka Connect* to stream
+The ``KineticaSourceConnector`` can be used as-is by *Kafka Connect* to stream
 data from *Kinetica* into *Kafka*. Data will be streamed in flat *Kafka Connect*
 ``Struct`` format with one field for each table column.  A separate *Kafka*
 topic will be created for each database table configured.
 
-The ``GPUdbSourceConnector`` is configured using a properties file that
+The ``KineticaSourceConnector`` is configured using a properties file that
 accepts the following parameters:
 
-* ``gpudb.url``: The URL of the database server
-* ``gpudb.username`` (optional): Username for authentication
-* ``gpudb.password`` (optional): Password for authentication
-* ``gpudb.timeout`` (optional): Timeout in milliseconds 
-* ``gpudb.table_names``: A comma-delimited list of names of tables to stream
+* ``kinetica.url``: The URL of the database server
+* ``kinetica.username`` (optional): Username for authentication
+* ``kinetica.password`` (optional): Password for authentication
+* ``kinetica.timeout`` (optional): Timeout in milliseconds 
+* ``kinetica.table_names``: A comma-delimited list of names of tables to stream
   from
 * ``topic_prefix``: The token that will be prepended to the name of each table
   to form the name of the corresponding *Kafka* topic into which records will be
@@ -56,23 +56,23 @@ accepts the following parameters:
 Streaming Data from Kafka into Kinetica
 ---------------------------------------
 
-The ``GPUdbSinkConnector`` can be used as-is by *Kafka Connect* to stream
+The ``KineticaSinkConnector`` can be used as-is by *Kafka Connect* to stream
 data from *Kafka* into *Kinetica*. Streamed data must be in a flat
 *Kafka Connect* ``Struct`` that uses only supported data types for fields
 (``BYTES``, ``FLOAT64``, ``FLOAT32``, ``INT32``, ``INT64``, and ``STRING``). No
 translation is performed on the data and it is streamed directly into a table.
 The target table and collection will be created if they do not exist.
 
-The ``GPUdbSinkConnector`` is configured using a properties file that
+The ``KineticaSinkConnector`` is configured using a properties file that
 accepts the following parameters:
 
-* ``gpudb.url``: The URL of the database server
-* ``gpudb.username`` (optional): Username for authentication
-* ``gpudb.password`` (optional): Password for authentication
-* ``gpudb.timeout`` (optional): Timeout in milliseconds
-* ``gpudb.collection_name`` (optional): Collection to put the table in
-* ``gpudb.table_name``: The name of the table to stream to
-* ``gpudb.batch_size``: The number of records to insert at one time
+* ``kinetica.url``: The URL of the database server
+* ``kinetica.username`` (optional): Username for authentication
+* ``kinetica.password`` (optional): Password for authentication
+* ``kinetica.timeout`` (optional): Timeout in milliseconds
+* ``kinetica.collection_name`` (optional): Collection to put the table in
+* ``kinetica.table_name``: The name of the table to stream to
+* ``kinetica.batch_size``: The number of records to insert at one time
 * ``topics``: *Kafka* parameter specifying which topics will be used as sources
 
 
@@ -100,30 +100,30 @@ To install the connector:
 * Copy the ``kafka-connector-<ver>-jar-with-dependencies.jar`` library to the
   target server
 
-* Create a configuration file (``source.properties``) for the source connector::
+* Create a configuration file (``source.properties``) for the source connector:
 
         name=<UniqueNameOfSourceConnector>
-        connector.class=com.gpudb.kafka.GPUdbSourceConnector
+        connector.class=com.kinetica.kafka.kineticaSourceConnector
         tasks.max=1
-        gpudb.url=<KineticaServiceURL>
-        gpudb.username=<KineticaAuthenticatingUserName>
-        gpudb.password=<KineticaAuthenticatingUserPassword>
-        gpudb.table_names=<KineticaSourceTableNameA,KineticaSourceTableNameB>
-        gpudb.timeout=<KineticaConnectionTimeoutInSeconds>
+        kinetica.url=<KineticaServiceURL>
+        kinetica.username=<KineticaAuthenticatingUserName>
+        kinetica.password=<KineticaAuthenticatingUserPassword>
+        kinetica.table_names=<KineticaSourceTableNameA,KineticaSourceTableNameB>
+        kinetica.timeout=<KineticaConnectionTimeoutInSeconds>
         topic_prefix=<TargetKafkaTopicNamesPrefix>
 
-* Create a configuration file (``sink.properties``) for the sink connector::
+* Create a configuration file (``sink.properties``) for the sink connector:
 
         name=<UniqueNameOfSinkConnector>
-        connector.class=com.gpudb.kafka.GPUdbSinkConnector
+        connector.class=com.kinetica.kafka.kineticaSinkConnector
         tasks.max=<NumberOfKafkaToKineticaWritingProcesses>
-        gpudb.url=<KineticaServiceURL>
-        gpudb.username=<KineticaAuthenticatingUserName>
-        gpudb.password=<KineticaAuthenticatingUserPassword>
-        gpudb.collection_name=<TargetKineticaCollectionName>
-        gpudb.table_name=<KineticaTargetTableName>
-        gpudb.timeout=<KineticaConnectionTimeoutInSeconds>
-        gpudb.batch_size=<NumberOfRecordsToBatchBeforeInsert>
+        kinetica.url=<KineticaServiceURL>
+        kinetica.username=<KineticaAuthenticatingUserName>
+        kinetica.password=<KineticaAuthenticatingUserPassword>
+        kinetica.collection_name=<TargetKineticaCollectionName>
+        kinetica.table_name=<KineticaTargetTableName>
+        kinetica.timeout=<KineticaConnectionTimeoutInSeconds>
+        kinetica.batch_size=<NumberOfRecordsToBatchBeforeInsert>
         topics=<TopicPrefix><SourceTableName>
 
 
@@ -140,26 +140,26 @@ files as shown below::
 **Note**: These files assume *Kinetica* is being run on your local host.  If it
 is not, replace the URL with the correct one for your system
 
-* Create a configuration file (``source.properties``) for the source connector::
+* Create a configuration file (``source.properties``) for the source connector:
 
         name=TwitterSourceConnector
-        connector.class=com.gpudb.kafka.GPUdbSourceConnector
+        connector.class=com.kinetica.kafka.kineticaSourceConnector
         tasks.max=1
-        gpudb.url=http://localhost:9191
-        gpudb.table_names=KafkaConnectorTest
-        gpudb.timeout=1000
+        kinetica.url=http://localhost:9191
+        kinetica.table_names=KafkaConnectorTest
+        kinetica.timeout=1000
         topic_prefix=Tweets.
         
 
-* Create a configuration file (``sink.properties``) for the sink connector::
+* Create a configuration file (``sink.properties``) for the sink connector:
 
         name=TwitterSinkConnector
-        connector.class=com.gpudb.kafka.GPUdbSinkConnector
+        connector.class=com.kinetica.kafka.KineticaSinkConnector
         tasks.max=4
-        gpudb.url=http://localhost:9191
-        gpudb.table_name=TwitterDest
-        gpudb.timeout=1000
-        gpudb.batch_size=100
+        kinetica.url=http://localhost:9191
+        kinetica.table_name=TwitterDest
+        kinetica.timeout=1000
+        kinetica.batch_size=100
         topics=Tweets.KafkaConnectorTest
         
 
@@ -168,7 +168,7 @@ is not, replace the URL with the correct one for your system
      
 The rest of this system test will require three terminal windows.
 
-* In terminal 1, start *zookeeper* and *kafka*::
+* In terminal 1, start *zookeeper* and *kafka*:
 
 		cd <path/to/Kafka>
 		bin/zookeeper-server-start.sh config/zookeeper.properties &
@@ -176,7 +176,7 @@ The rest of this system test will require three terminal windows.
         
 * In terminal 2, start test datapump::
     
-		java -cp kafka-connector-6.0.0-jar-with-dependencies.jar com.gpudb.kafka.tests.TestDataPump <gpudb url>
+		java -cp kafka-connector-6.0.0-jar-with-dependencies.jar com.kinetica.kafka.tests.TestDataPump <Kinetica url>
 
 * In terminal 3, start kafka connector::
 
