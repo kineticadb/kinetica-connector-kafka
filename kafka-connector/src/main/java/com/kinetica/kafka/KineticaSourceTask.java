@@ -1,4 +1,4 @@
-package com.gpudb.kafka;
+package com.kinetica.kafka;
 
 import com.gpudb.Avro;
 import com.gpudb.GPUdb;
@@ -35,20 +35,20 @@ import org.zeromq.ZMQ;
 import org.zeromq.ZMsg;
 
 /**
- * Kafka SourceTask for streaming data from a GPUdb table.
+ * Kafka SourceTask for streaming data from a kinetica table.
  * 
  * The data streaming pipeline will begin with creating a table monitor on the
  * given source table.  As records are inserted into the table, a copy will be
- * placed on a queue, to which the {@link GPUdbSourceConnector} is attached.
+ * placed on a queue, to which the {@link KineticaSourceConnector} is attached.
  * The SourceTask will stream records from the queue as they are added, and add
  * them to a Kafka topic.
  * 
  * The streaming source table can either be part of a collection or not, but
  * cannot be a collection itself.
  */
-public class GPUdbSourceTask extends SourceTask {
+public class KineticaSourceTask extends SourceTask {
     private static final String CONF_MONITOR_PORT = "conf.set_monitor_port";
-    private static final Logger LOG = LoggerFactory.getLogger(GPUdbSourceTask.class);
+    private static final Logger LOG = LoggerFactory.getLogger(KineticaSourceTask.class);
 
     private LinkedBlockingQueue<SourceRecord> queue;
     private List<Thread> monitorThreads;
@@ -56,12 +56,12 @@ public class GPUdbSourceTask extends SourceTask {
     @Override
     public void start(final Map<String, String> props) {
         final URL url;
-        final String[] tables = props.get(GPUdbSourceConnector.TABLE_NAMES_CONFIG).split(",");
+        final String[] tables = props.get(KineticaSourceConnector.TABLE_NAMES_CONFIG).split(",");
 
         try {
-            url = new URL(props.get(GPUdbSourceConnector.URL_CONFIG));
+            url = new URL(props.get(KineticaSourceConnector.URL_CONFIG));
         } catch (MalformedURLException ex) {
-            throw new IllegalArgumentException("Invalid URL (" + props.get(GPUdbSourceConnector.URL_CONFIG) + ").");
+            throw new IllegalArgumentException("Invalid URL (" + props.get(KineticaSourceConnector.URL_CONFIG) + ").");
         }
 
         final GPUdb gpudb;
@@ -69,9 +69,9 @@ public class GPUdbSourceTask extends SourceTask {
 
         try {
             gpudb = new GPUdb(url, new GPUdb.Options()
-                    .setUsername(props.get(GPUdbSourceConnector.USERNAME_CONFIG))
-                    .setPassword(props.get(GPUdbSourceConnector.PASSWORD_CONFIG))
-                    .setTimeout(Integer.parseInt(props.get(GPUdbSourceConnector.TIMEOUT_CONFIG))));
+                    .setUsername(props.get(KineticaSourceConnector.USERNAME_CONFIG))
+                    .setPassword(props.get(KineticaSourceConnector.PASSWORD_CONFIG))
+                    .setTimeout(Integer.parseInt(props.get(KineticaSourceConnector.TIMEOUT_CONFIG))));
 
             for (String table : tables) {
                 // Get table info from /show/table.
@@ -218,7 +218,7 @@ public class GPUdbSourceTask extends SourceTask {
                                 queue.add(new SourceRecord(
                                         Collections.singletonMap("table", table),
                                         Collections.singletonMap("record", recordNumber),
-                                        props.get(GPUdbSourceConnector.TOPIC_PREFIX_CONFIG) + table,
+                                        props.get(KineticaSourceConnector.TOPIC_PREFIX_CONFIG) + table,
                                         Schema.INT64_SCHEMA,
                                         recordNumber,
                                         schema,

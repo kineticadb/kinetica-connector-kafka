@@ -1,4 +1,4 @@
-package com.gpudb.kafka.tests;
+package com.kinetica.kafka.tests;
 
 import com.gpudb.ColumnProperty;
 import com.gpudb.RecordObject;

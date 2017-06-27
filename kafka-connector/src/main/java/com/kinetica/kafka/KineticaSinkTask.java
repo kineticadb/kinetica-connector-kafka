@@ -1,4 +1,4 @@
-package com.gpudb.kafka;
+package com.kinetica.kafka;
 
 import com.gpudb.BulkInserter;
 import com.gpudb.GPUdb;
@@ -27,18 +27,18 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Kafka SinkTask for streaming data into a GPUdb table.
+ * Kafka SinkTask for streaming data into a Kinetica table.
  *
  * The data streaming pipeline will begin with records being added to the Kafka
- * topic to which the {@link GPUdbSinkConnector} is attached.  As records are
+ * topic to which the {@link KineticaSinkConnector} is attached.  As records are
  * queued, this SinkTask will connect to that queue, stream records from it, and
- * insert them into a GPUdb target table.
+ * insert them into a Kinetica target table.
  *
  * The streaming target table can either be part of a collection or not, and can
  * also be a collection itself.
  */
-public class GPUdbSinkTask extends SinkTask {
-    private static final Logger LOG = LoggerFactory.getLogger(GPUdbSinkTask.class);
+public class KineticaSinkTask extends SinkTask {
+    private static final Logger LOG = LoggerFactory.getLogger(KineticaSinkTask.class);
 
     private Map<String, String> config;
     private Type type;
@@ -55,8 +55,8 @@ public class GPUdbSinkTask extends SinkTask {
             return;
         }
 
-        String url = config.get(GPUdbSinkConnector.URL_CONFIG);
-        String tableName = config.get(GPUdbSinkConnector.TABLE_NAME_CONFIG);
+        String url = config.get(KineticaSinkConnector.URL_CONFIG);
+        String tableName = config.get(KineticaSinkConnector.TABLE_NAME_CONFIG);
 
         // If there is no bulk inserter yet (because this is the first time put
         // was called), either look up the type from the specified table (if it
@@ -69,11 +69,11 @@ public class GPUdbSinkTask extends SinkTask {
             try {
                 
                 gpudb = new GPUdb(url, new GPUdb.Options()
-                        .setUsername(config.get(GPUdbSinkConnector.USERNAME_CONFIG))
-                        .setPassword(config.get(GPUdbSinkConnector.PASSWORD_CONFIG))
-                        .setTimeout(Integer.parseInt(config.get(GPUdbSinkConnector.TIMEOUT_CONFIG))));
+                        .setUsername(config.get(KineticaSinkConnector.USERNAME_CONFIG))
+                        .setPassword(config.get(KineticaSinkConnector.PASSWORD_CONFIG))
+                        .setTimeout(Integer.parseInt(config.get(KineticaSinkConnector.TIMEOUT_CONFIG))));
             } catch (GPUdbException ex) {
-                LOG.error("Unable to connect to GPUdb at " + url, ex);
+                LOG.error("Unable to connect to Kinetica at " + url, ex);
                 throw new ConnectException(ex);
             }
 
@@ -84,7 +84,7 @@ public class GPUdbSinkTask extends SinkTask {
                     type = Type.fromTable(gpudb, tableName);
                 }
             } catch (GPUdbException ex) {
-                LOG.error("Unable to lookup table " + tableName + " in GPUdb at " + url, ex);
+                LOG.error("Unable to lookup table " + tableName + " in Kinetica at " + url, ex);
                 throw new ConnectException(ex);
             }
 
@@ -143,13 +143,12 @@ public class GPUdbSinkTask extends SinkTask {
                 try {
                     type = new Type(columns);
                     gpudb.createTable
-                    (
-                        tableName,
+                    (tableName,
                         type.create(gpudb),
-                        GPUdb.options(CreateTableRequest.Options.COLLECTION_NAME, config.get(GPUdbSinkConnector.COLLECTION_NAME_CONFIG))
+                        GPUdb.options(CreateTableRequest.Options.COLLECTION_NAME, config.get(KineticaSinkConnector.COLLECTION_NAME_CONFIG))
                     );
                 } catch (Exception ex) {
-                    LOG.error("Unable to create table " + tableName + " in GPUdb at " + url, ex);
+                    LOG.error("Unable to create table " + tableName + " in Kinetica at " + url, ex);
                     throw new ConnectException(ex);
                 }
             }
@@ -158,12 +157,12 @@ public class GPUdbSinkTask extends SinkTask {
 
             try {
                 bi = new BulkInserter<>(gpudb,
-                        config.get(GPUdbSinkConnector.TABLE_NAME_CONFIG),
+                        config.get(KineticaSinkConnector.TABLE_NAME_CONFIG),
                         type,
-                        Integer.parseInt(config.get(GPUdbSinkConnector.BATCH_SIZE_CONFIG)),
+                        Integer.parseInt(config.get(KineticaSinkConnector.BATCH_SIZE_CONFIG)),
                         null);
             } catch (GPUdbException ex) {
-                LOG.error("Unable to create bulk inserter for table " + tableName + " in GPUdb at " + url, ex);
+                LOG.error("Unable to create bulk inserter for table " + tableName + " in Kinetica at " + url, ex);
                 throw new ConnectException(ex);
             }
         }
@@ -266,7 +265,7 @@ public class GPUdbSinkTask extends SinkTask {
                 try {
                     bi.insert(record);
                 } catch (GPUdbException ex) {
-                    LOG.error("Unable to insert into table " + tableName + " in GPUdb at " + url, ex);
+                    LOG.error("Unable to insert into table " + tableName + " in Kinetica at " + url, ex);
                     throw new ConnectException(ex);
                 }
             }
@@ -281,7 +280,7 @@ public class GPUdbSinkTask extends SinkTask {
             try {
                 bi.flush();
             } catch (GPUdbException ex) {
-                LOG.error("Unable to insert into table " + config.get(GPUdbSinkConnector.TABLE_NAME_CONFIG) + " in GPUdb at " + config.get(GPUdbSinkConnector.URL_CONFIG), ex);
+                LOG.error("Unable to insert into table " + config.get(KineticaSinkConnector.TABLE_NAME_CONFIG) + " in GPUdb at " + config.get(KineticaSinkConnector.URL_CONFIG), ex);
                 throw new ConnectException(ex);
             }
         }
