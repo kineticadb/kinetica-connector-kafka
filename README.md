@@ -103,7 +103,7 @@ To install the connector:
 * Create a configuration file (``source.properties``) for the source connector:
 
         name=<UniqueNameOfSourceConnector>
-        connector.class=com.kinetica.kafka.kineticaSourceConnector
+        connector.class=com.kinetica.kafka.KineticaSourceConnector
         tasks.max=1
         kinetica.url=<KineticaServiceURL>
         kinetica.username=<KineticaAuthenticatingUserName>
@@ -115,7 +115,7 @@ To install the connector:
 * Create a configuration file (``sink.properties``) for the sink connector:
 
         name=<UniqueNameOfSinkConnector>
-        connector.class=com.kinetica.kafka.kineticaSinkConnector
+        connector.class=com.kinetica.kafka.KineticaSinkConnector
         tasks.max=<NumberOfKafkaToKineticaWritingProcesses>
         kinetica.url=<KineticaServiceURL>
         kinetica.username=<KineticaAuthenticatingUserName>
@@ -143,7 +143,7 @@ is not, replace the URL with the correct one for your system
 * Create a configuration file (``source.properties``) for the source connector:
 
         name=TwitterSourceConnector
-        connector.class=com.kinetica.kafka.kineticaSourceConnector
+        connector.class=com.kinetica.kafka.KineticaSourceConnector
         tasks.max=1
         kinetica.url=http://localhost:9191
         kinetica.table_names=KafkaConnectorTest
@@ -176,10 +176,10 @@ The rest of this system test will require three terminal windows.
         
 * In terminal 2, start test datapump::
     
-		java -cp kafka-connector-6.0.0-jar-with-dependencies.jar com.kinetica.kafka.tests.TestDataPump <Kinetica url>
+		java -cp kafka-connector-6.1.0-jar-with-dependencies.jar com.kinetica.kafka.tests.TestDataPump <Kinetica url>
 
 * In terminal 3, start kafka connector::
 
-		export CLASSPATH=<path/to/kafka-connector-6.0.0-jar-with-dependencies.jar>
+		export CLASSPATH=<path/to/kafka-connector-6.1.0-jar-with-dependencies.jar>
 		cd <path/to/Kafka>
 		bin/connect-standalone.sh config/connect-standalone.properties <source.properties> <sink.properties>
