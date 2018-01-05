@@ -1,15 +1,5 @@
 package com.kinetica.kafka;
 
-import com.gpudb.Avro;
-import com.gpudb.GPUdb;
-import com.gpudb.GPUdbException;
-import com.gpudb.GenericRecord;
-import com.gpudb.Type;
-import com.gpudb.Type.Column;
-import com.gpudb.protocol.CreateTableMonitorResponse;
-import com.gpudb.protocol.ShowTableRequest;
-import com.gpudb.protocol.ShowTableResponse;
-
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.ByteBuffer;
@@ -18,8 +8,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.logging.Level;
-import org.apache.kafka.common.errors.InterruptException;
 
 import org.apache.kafka.common.utils.AppInfoParser;
 import org.apache.kafka.connect.data.Schema;
@@ -34,15 +22,25 @@ import org.zeromq.ZFrame;
 import org.zeromq.ZMQ;
 import org.zeromq.ZMsg;
 
+import com.gpudb.Avro;
+import com.gpudb.GPUdb;
+import com.gpudb.GPUdbException;
+import com.gpudb.GenericRecord;
+import com.gpudb.Type;
+import com.gpudb.Type.Column;
+import com.gpudb.protocol.CreateTableMonitorResponse;
+import com.gpudb.protocol.ShowTableRequest;
+import com.gpudb.protocol.ShowTableResponse;
+
 /**
  * Kafka SourceTask for streaming data from a kinetica table.
- * 
+ *
  * The data streaming pipeline will begin with creating a table monitor on the
  * given source table.  As records are inserted into the table, a copy will be
  * placed on a queue, to which the {@link KineticaSourceConnector} is attached.
  * The SourceTask will stream records from the queue as they are added, and add
  * them to a Kafka topic.
- * 
+ *
  * The streaming source table can either be part of a collection or not, but
  * cannot be a collection itself.
  */

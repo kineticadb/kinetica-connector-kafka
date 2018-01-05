@@ -68,6 +68,8 @@ public class TestConnector {
     public void testConnector() throws Exception {
 
         try {
+        		createSourceTable();
+
             KineticaSourceTask sourceTask = startSourceConnector(this.sourceConfig);
 
             // wait for ZMQ to start
@@ -105,26 +107,25 @@ public class TestConnector {
      * in {@link com.kinetica.kafka.tests.TweetRecord}.
      * @throws Exception
      */
-    @Test
     public void createSourceTable() throws Exception {
         final String COLLECTION_NAME = "TEST";
 
         try {
-                Map<String,String> sourceConfig = getConfig("src/test/resources/source.properties");
-                String gpudbURL = sourceConfig.get(KineticaSourceConnector.URL_CONFIG);
-                String tableName = sourceConfig.get(KineticaSourceConnector.TABLE_NAMES_CONFIG);
+            String gpudbURL = this.sourceConfig.get(KineticaSourceConnector.URL_CONFIG);
+            String tableName = sourceConfig.get(KineticaSourceConnector.TABLE_NAMES_CONFIG);
 
             GPUdb gpudb = new GPUdb(gpudbURL);
-            String typeId = RecordObject.createType(TweetRecord.class, gpudb);
 
             if(gpudb.hasTable(tableName, null).getTableExists()) {
-                    LOG.info("Dropping table: {}", tableName);
-                    gpudb.clearTable(tableName, null, null);
+                LOG.info("Dropping table: {}", tableName);
+                gpudb.clearTable(tableName, null, null);
             }
 
-                LOG.info("Creating table: {}", tableName);
-                Map<String, String> options = GPUdbBase.options(
-                        CreateTableRequest.Options.COLLECTION_NAME, COLLECTION_NAME);
+            String typeId = RecordObject.createType(TweetRecord.class, gpudb);
+
+            LOG.info("Creating table: {}", tableName);
+            Map<String, String> options = GPUdbBase.options(
+                    CreateTableRequest.Options.COLLECTION_NAME, COLLECTION_NAME);
             gpudb.createTable(tableName, typeId, options);
 
             LOG.info("Done!");
@@ -185,6 +186,11 @@ public class TestConnector {
         return task;
     }
 
+    @Test
+    public void testInsertTableRecs() throws Exception {
+        insertTableRecs(this.sourceConfig, NUM_RECS);
+    }
+
     public void insertTableRecs(Map<String,String> sourceConfig, long numRecs) throws Exception {
 
         String gpudbURL = sourceConfig.get(KineticaSourceConnector.URL_CONFIG);
@@ -204,8 +210,8 @@ public class TestConnector {
         bulkInserter.flush();
 
         if(bulkInserter.getCountInserted() != numRecs) {
-                throw new Exception(String.format("Added %d records but only %d were inserted.",
-                        records.size(), bulkInserter.getCountInserted()));
+            throw new Exception(String.format("Added %d records but only %d were inserted.",
+                    records.size(), bulkInserter.getCountInserted()));
         }
 
         records.clear();

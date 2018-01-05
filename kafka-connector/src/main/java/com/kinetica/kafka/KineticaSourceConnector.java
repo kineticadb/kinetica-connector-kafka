@@ -16,25 +16,30 @@ import org.apache.kafka.connect.source.SourceConnector;
 
 /**
  * Kafka SourceConnector for streaming data from a GPUdb table.
- * 
+ *
  * The SourceConnector is used to configure the {@link KineticaSourceTask}, which
  * performs the work of pulling data from the source into Kafka.
  */
 public class KineticaSourceConnector extends SourceConnector {
     /** Config file key for Kinetica URL */
     public static final String URL_CONFIG = "kinetica.url";
+
     /** Config file key for Kinetica username */
     public static final String USERNAME_CONFIG = "kinetica.username";
+
     /** Config file key for Kinetica password */
     public static final String PASSWORD_CONFIG = "kinetica.password";
+
     /** Config file key for Kinetica request/response timeouts */
     public static final String TIMEOUT_CONFIG = "kinetica.timeout";
+
     /** Config file key for names of Kinetica tables to use as streaming sources */
     public static final String TABLE_NAMES_CONFIG = "kinetica.table_names";
+
     /** Config file key for token prepended to each source table name to form
      *  the name of the corresponding Kafka topic into which those records will
      *  be queued */
-    public static final String TOPIC_PREFIX_CONFIG = "topic_prefix";
+    public static final String TOPIC_PREFIX_CONFIG = "kinetica.topic_prefix";
 
     private static final String DEFAULT_TIMEOUT = "0";
 
@@ -53,13 +58,12 @@ public class KineticaSourceConnector extends SourceConnector {
     }
 
     @Override
-    @SuppressWarnings("ResultOfObjectAllocationIgnored")
     public void start(Map<String, String> props) {
-        Map<String,Object> configParsed = KineticaSourceConnector.CONFIG_DEF.parse(props); 
+        Map<String,Object> configParsed = KineticaSourceConnector.CONFIG_DEF.parse(props);
         config = new HashMap<String,String>();
         for (Map.Entry<String, Object> entry : configParsed.entrySet()) {
             config.put(entry.getKey(), entry.getValue().toString());
-        }        
+        }
 
         try {
             new URL(props.get(URL_CONFIG));
