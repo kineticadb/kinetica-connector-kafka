@@ -150,7 +150,7 @@ usage: TestDataPump [options] URL
 The below example runs the datapump with default options and will insert batches of 10 records every
 3 seconds.
 ```
-java -cp kafka-connector-6.1.0-jar-with-dependencies.jar \
+java -cp kafka-connector-6.2.0-jar-with-dependencies.jar \
     com.kinetica.kafka.tests.TestDataPump \
     http://gpudb:9191
 ```
@@ -231,12 +231,12 @@ $ bin/kafka-server-start.sh config/server.properties
 ```
 * In terminal 2, start test datapump. This will create the `KafkaConnectorTest` and `KafkaConnectorTest2` tables and generate insert activity.
 ```sh
-$ java -cp kafka-connector-6.1.0-jar-with-dependencies.jar \
+$ java -cp kafka-connector-6.2.0-jar-with-dependencies.jar \
     com.kinetica.kafka.tests.TestDataPump <Kinetica url>
 ```
 * In terminal 3, start kafka source and sink connectors:
 ```sh
-$ export CLASSPATH=<path/to/kafka-connector-6.1.0-jar-with-dependencies.jar>
+$ export CLASSPATH=<path/to/kafka-connector-6.2.0-jar-with-dependencies.jar>
 $ cd <path/to/Kafka>
 $ bin/connect-standalone.sh \
     config/connect-standalone.properties <source.properties> <sink.properties>
