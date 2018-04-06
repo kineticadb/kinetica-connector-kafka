@@ -1,17 +1,16 @@
 package com.kinetica.kafka;
 
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
+import java.text.SimpleDateFormat;
 import java.util.Collection;
+import java.util.Date;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import org.apache.kafka.clients.consumer.OffsetAndMetadata;
 import org.apache.kafka.common.KafkaException;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.utils.AppInfoParser;
-import org.apache.kafka.connect.data.Field;
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.Struct;
 import org.apache.kafka.connect.errors.ConnectException;
@@ -21,13 +20,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.gpudb.BulkInserter;
-import com.gpudb.GPUdb;
-import com.gpudb.GPUdbBase;
 import com.gpudb.GPUdbException;
 import com.gpudb.GenericRecord;
 import com.gpudb.Type;
 import com.gpudb.Type.Column;
-import com.gpudb.protocol.CreateTableRequest;
 
 //import kafka.common.KafkaException;
 
@@ -45,34 +41,20 @@ import com.gpudb.protocol.CreateTableRequest;
 public class KineticaSinkTask extends SinkTask {
     private static final Logger LOG = LoggerFactory.getLogger(KineticaSinkTask.class);
 
-    // from configuration
-    private String collectionName;
-    private GPUdb gpudb;
-    private int batchSize;
-    private String tablePrefix;
+    // Dates larger than this will fail in 6.1
+    private final static long MAX_DATE = 29379542399999L;
+    private final static long MIN_DATE = -30610224000000L;
 
     // cached objects
-    private final HashMap<String, Type> typeMap = new HashMap<>();
     private final HashMap<String, BulkInserter<GenericRecord>> biMap = new HashMap<>();
+    private final HashMap<String, Type> typeMap = new HashMap<>();
+
+    private final SimpleDateFormat tsFormatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+    SinkSchemaManager schemaMgr;
 
     @Override
     public void start(Map<String, String> props) {
-        String url = props.get(KineticaSinkConnector.URL_CONFIG);
-        this.batchSize = Integer.parseInt(props.get(KineticaSinkConnector.BATCH_SIZE_CONFIG));
-        this.collectionName = props.get(KineticaSinkConnector.COLLECTION_NAME_CONFIG);
-        this.tablePrefix = props.get(KineticaSinkConnector.TABLE_PREFIX_CONFIG);
-
-        try {
-            this.gpudb = new GPUdb(url, new GPUdb.Options()
-                    .setUsername(props.get(KineticaSinkConnector.USERNAME_CONFIG))
-                    .setPassword(props.get(KineticaSinkConnector.PASSWORD_CONFIG))
-                    .setTimeout(Integer.parseInt(props.get(KineticaSinkConnector.TIMEOUT_CONFIG))));
-        }
-        catch (GPUdbException ex) {
-            ConnectException cex = new ConnectException("Unable to connect to Kinetica at: " + url, ex);
-            LOG.error(cex.getMessage(), ex);
-            throw cex;
-        }
+        this.schemaMgr = new SinkSchemaManager(props);
     }
 
     @Override
@@ -83,6 +65,10 @@ public class KineticaSinkTask extends SinkTask {
                 long recordsBefore = bi.getCountInserted();
                 bi.flush();
                 long recordsInserted = bi.getCountInserted() - recordsBefore;
+
+                if(recordsInserted == 0) {
+                    continue;
+                }
                 LOG.info("[{}] Flushing {} records for <{}>",
                         Thread.currentThread().getName(), recordsInserted, bi.getTableName());
             }
@@ -110,52 +96,32 @@ public class KineticaSinkTask extends SinkTask {
             return;
         }
 
-        Schema kafkaSchema = sinkRecords.iterator().next().valueSchema();
-        Type gpudbSchema;
-        BulkInserter<GenericRecord> builkInserter;
-        String tableName;
-
-        try {
-            // create table to get that type if necessary
-            tableName = this.tablePrefix + kafkaSchema.name();
-            gpudbSchema = getType(kafkaSchema, tableName);
-
-            // Create the bulk inserter based on the previously obtained type.
-            builkInserter = getBulkInserter(gpudbSchema, tableName);
-        }
-        catch (GPUdbException gex) {
-            ConnectException kex = new ConnectException(gex.getMessage(), gex);
-            LOG.error(kex.getMessage(), kex);
-            throw kex;
-        }
-        catch (Exception ex) {
-            KafkaException kex = new KafkaException(ex.getMessage(), ex);
-            LOG.error(kex.getMessage(), kex);
-            throw kex;
-        }
-
         // Loop through all sink records in the collection and create records
         // out of them.
         for (SinkRecord sinkRecord : sinkRecords) {
 
-            GenericRecord record;
+            Type gpudbSchema;
+            BulkInserter<GenericRecord> builkInserter;
+
             try {
-                record = convertRecord(sinkRecord, gpudbSchema);
+                builkInserter = getBulkInserter(sinkRecord);
+                gpudbSchema = this.typeMap.get(builkInserter.getTableName());
             }
-            catch(Exception ex) {
-                KafkaException kex = new KafkaException(
-                        String.format("Record conversion failed for %s: %s", tableName, ex.getMessage()), ex);
+            catch (Exception ex) {
+                KafkaException kex = new KafkaException(String.format("Unable to obtain schema: %s",
+                        ex.getMessage()), ex);
                 LOG.error(kex.getMessage(), ex);
                 throw kex;
             }
 
-            // If the record didn't fail, insert into GPUdb.
+            GenericRecord gpudbRecord;
             try {
-                builkInserter.insert(record);
+                gpudbRecord = convertRecord(sinkRecord.value(), gpudbSchema);
+                builkInserter.insert(gpudbRecord);
             }
-            catch (GPUdbException ex) {
-                KafkaException kex = new KafkaException(
-                        String.format("Unable to insert into %s: %s", tableName, ex.getMessage()), ex);
+            catch(Exception ex) {
+                KafkaException kex = new KafkaException(String.format("Record conversion failed for %s: %s",
+                                builkInserter.getTableName(), ex.getMessage()), ex);
                 LOG.error(kex.getMessage(), ex);
                 throw kex;
             }
@@ -164,150 +130,182 @@ public class KineticaSinkTask extends SinkTask {
         LOG.debug("Sunk {} records", sinkRecords.size());
     }
 
-    BulkInserter<GenericRecord> getBulkInserter(Type gpudbSchema, String tableName) throws GPUdbException {
+    private BulkInserter<GenericRecord> getBulkInserter(SinkRecord record) throws Exception {
+        String tableName;
+        Object genericSchema = record.valueSchema();
 
-        BulkInserter<GenericRecord> cachedBi = this.biMap.get(tableName);
-        if (cachedBi != null) {
-            return cachedBi;
+        if(genericSchema == null) {
+            // this must be a schemaless record
+
+            Object keyValue = record.key();
+            String sourceTable = null;
+            if(keyValue.getClass() == String.class) {
+                // for schemaless records assume the key has the table name
+                sourceTable = (String)keyValue;
+            }
+
+            // get thet tablename from the key
+            tableName = this.schemaMgr.getDestTable(sourceTable);
+
+            @SuppressWarnings("unchecked")
+            HashMap<String, Object> valueHash = (HashMap<String, Object>)record.value();
+            genericSchema = getColumnsFromMap(valueHash);
+        }
+        else {
+            // must be a kafka Schema
+            Schema kafkaSchema = (Schema)genericSchema;
+
+            // generate tablename from kafka schema
+            tableName = this.schemaMgr.getDestTable(kafkaSchema.name());
         }
 
-        // If there is no bulk inserter yet (because this is the first time put
-        // was called), either look up the type from the specified table (if it
-        // exists) or create one (and the table) by analyzing the first sink
-        // record in the collection, then create the bulk inserter.
-        cachedBi = new BulkInserter<>(this.gpudb, tableName, gpudbSchema, this.batchSize, null);
-        this.biMap.put(tableName, cachedBi);
-        return cachedBi;
+        // see if it is already in the cache
+        BulkInserter<GenericRecord> bulkInserter = this.biMap.get(tableName);
+        if (bulkInserter != null) {
+            return bulkInserter;
+        }
+
+        // Create the bulk inserter based on the previously obtained type.
+        Type gpudbSchema = this.schemaMgr.getType(tableName, genericSchema);
+        this.typeMap.put(tableName, gpudbSchema);
+
+        bulkInserter = this.schemaMgr.getBulkInserter(tableName, gpudbSchema);
+        this.biMap.put(tableName, bulkInserter);
+
+        return bulkInserter;
     }
 
-    GenericRecord convertRecord(SinkRecord sinkRecord, Type schemaType) throws Exception {
-        Struct struct = (Struct)sinkRecord.value();
-        GenericRecord record = new GenericRecord(schemaType);
+    private GenericRecord convertRecord(Object inRecord, Type gpudbSchema) throws Exception {
+        GenericRecord outRecord = new GenericRecord(gpudbSchema);
+        Class<?> inRecordType = inRecord.getClass();
 
         // Loop through all columns.
-        for (Column column : schemaType.getColumns()) {
-            Object value;
+        for (Column column : gpudbSchema.getColumns()) {
             try {
-                value = getColumnValue(struct, column);
+                String columnName = column.getName();
+                Object inValue = getColumnValue(columnName, inRecord, inRecordType);
+
+                Object outValue = convertValue(inValue, column);
+                if(outValue == null) {
+                    continue;
+                }
+
+                outRecord.put(column.getName(), outValue);
             }
             catch(Exception ex) {
-                throw new Exception(String.format("Convert failed for column {}: {}", column.getName(), ex.getMessage()));
+                throw new Exception(String.format("Convert failed for column %s: %s",
+                        column.getName(), ex.getMessage()), ex);
             }
-            record.put(column.getName(), value);
         }
-
-        return record;
+        return outRecord;
     }
 
-    Object getColumnValue(Struct struct, Column column) throws Exception {
+    private Object getColumnValue(String columnName, Object inRecord, Class<?> inRecordType) throws Exception {
+        Object inValue;
 
-        String columnName = column.getName();
-        Class<?> columnType = column.getType();
-
-        Object outValue = null;
-        outValue = struct.get(columnName);
-
-        if (outValue == null) {
-            throw new Exception("Unsupported null value in field.");
+        if(inRecordType == Struct.class) {
+            // we have a Kafka Schema
+            Struct structRec = (Struct)inRecord;
+            inValue = structRec.get(columnName);
         }
+        else if(inRecordType == HashMap.class) {
+            // schema-less record
+            @SuppressWarnings("unchecked")
+            HashMap<String, Object> hashRec = (HashMap<String, Object>)inRecord;
+
+            hashRec = getColumnsFromMap(hashRec);
+            if(!hashRec.containsKey(columnName)) {
+                throw new Exception("Column is not found in record.");
+            }
+
+            inValue = hashRec.get(columnName);
+        }
+        else {
+            throw new Exception("Record type not supported: " + inRecord.getClass().toString());
+        }
+
+        return inValue;
+    }
+
+    private Object convertValue(Object inValue, Column column) throws Exception {
+        if(inValue == null) {
+            if(!column.isNullable()) {
+                throw new Exception("Unsupported null value in field.");
+            }
+            return null;
+        }
+
+        Class<?> inType = inValue.getClass();
+        Class<?> outType = column.getType();
+        Object outValue;
 
         // Check the type of the field in the sink record versus the
         // type of the column to ensure compatibility; if not
         // compatible, fail the record, otherwise copy the value.
 
-        if (columnType == ByteBuffer.class && outValue instanceof byte[]) {
-            return ByteBuffer.wrap((byte[])outValue);
+        if(outType.isAssignableFrom(inType)) {
+            // same types
+            outValue = inValue;
         }
-        else if (columnType == Double.class && outValue instanceof Double) {
-            return outValue;
+        else if(Number.class.isAssignableFrom(inType)) {
+            Number inNumber = (Number)inValue;
+            if(outType == Long.class) {
+                outValue = inNumber.longValue();
+            }
+            else if(outType == Integer.class) {
+                outValue = inNumber.intValue();
+            }
+            else if(outType == Double.class) {
+                outValue = inNumber.doubleValue();
+            }
+            else if(outType == Float.class) {
+                outValue = inNumber.floatValue();
+            }
+            else {
+                throw new Exception(String.format("Could not convert numeric type: %s -> %s",
+                            outType.getSimpleName(), inType.getSimpleName()));
+            }
         }
-        else if (columnType == Float.class && outValue instanceof Float) {
-            return outValue;
+        else if(inValue instanceof String && column.getProperties().contains("timestamp")) {
+            String dateStr = (String)inValue;
+            Date dateVal = this.tsFormatter.parse(dateStr);
+            long outDate = dateVal.getTime();
+
+            if (outDate > MAX_DATE) {
+                outDate = MAX_DATE;
+            }
+
+            if (outDate < MIN_DATE) {
+                outDate = MIN_DATE;
+            }
+            outValue = outDate;
         }
-        else if (columnType == Integer.class && outValue instanceof Integer) {
-            return outValue;
-        }
-        else if (columnType == Long.class && outValue instanceof Long) {
-            return outValue;
-        }
-        else if (columnType == String.class && outValue instanceof String) {
-            return outValue;
+        else if(outType == ByteBuffer.class && inValue instanceof byte[]) {
+            outValue = ByteBuffer.wrap((byte[])inValue);
         }
         else {
             throw new Exception(String.format("Type mismatch. Expected %s but got %s.",
-                    columnType.getSimpleName(), outValue.getClass().getSimpleName()));
+                    outType.getSimpleName(), inType.getSimpleName()));
         }
+
+        return outValue;
     }
 
-    Type getType(Schema schema, String tableName) throws Exception {
-        Type cachedType = this.typeMap.get(tableName);
-        if(cachedType != null) {
-            return cachedType;
+    private HashMap<String, Object> getColumnsFromMap(HashMap<String, Object> columnMap) throws Exception {
+        // Assume that if there is an op_type field then this is from Oracle Golden Gate.
+        String oggOperation = (String)columnMap.get("op_type");
+        if(oggOperation == null) {
+            // This is not OGG and is a regular schema-less record.
+            return columnMap;
         }
 
-        if (this.gpudb.hasTable(tableName, null).getTableExists()) {
-            // If the table exists, get the schema from it.
-            LOG.info("Creating type for table: {}", tableName);
-            cachedType = Type.fromTable(this.gpudb, tableName);
-            this.typeMap.put(tableName, cachedType);
-            return cachedType;
+        // OGG stores the columns in the "after" field.
+        @SuppressWarnings("unchecked")
+        HashMap<String, Object> afterRecord = (HashMap<String, Object>)columnMap.get("after");
+        if(afterRecord == null) {
+            throw new Exception("OGG after record is missing.");
         }
 
-        cachedType = createTable(schema, tableName);
-        this.typeMap.put(tableName, cachedType);
-        return cachedType;
-    }
-
-    Type createTable(Schema schema, String tableName) throws Exception {
-        // If the table does not exist, loop through the first sink record's
-        // fields and build a type based on their names and types.
-        List<Column> columns = new ArrayList<>();
-
-        for (Field field : schema.fields()) {
-            if (null != field.schema().type()) switch (field.schema().type()) {
-            case BYTES:
-                columns.add(new Column(field.name(), ByteBuffer.class));
-                break;
-
-            case FLOAT64:
-                columns.add(new Column(field.name(), Double.class));
-                break;
-
-            case FLOAT32:
-                columns.add(new Column(field.name(), Float.class));
-                break;
-
-            case INT32:
-                columns.add(new Column(field.name(), Integer.class));
-                break;
-
-            case INT64:
-                columns.add(new Column(field.name(), Long.class));
-                break;
-
-            case STRING:
-                columns.add(new Column(field.name(), String.class));
-                break;
-
-            default:
-                Exception ex = new Exception("Unsupported type for field " + field.name() + ".");
-                LOG.error(ex.getMessage());
-                throw ex;
-            }
-        }
-
-        if (columns.isEmpty()) {
-            throw new Exception("Schema has no fields.");
-        }
-
-        // Create the table based on the newly created schema.
-        Type tableType = new Type(columns);
-        String typeId = tableType.create(this.gpudb);
-
-        LOG.info("Creating table: {}", tableName);
-        this.gpudb.createTable(tableName, typeId,
-                GPUdbBase.options(CreateTableRequest.Options.COLLECTION_NAME, this.collectionName) );
-
-        return tableType;
+        return afterRecord;
     }
 }

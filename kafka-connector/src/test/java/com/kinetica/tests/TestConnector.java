@@ -111,8 +111,8 @@ public class TestConnector {
         final String COLLECTION_NAME = "TEST";
 
         try {
-            String gpudbURL = this.sourceConfig.get(KineticaSourceConnector.URL_CONFIG);
-            String tableName = sourceConfig.get(KineticaSourceConnector.TABLE_NAMES_CONFIG);
+            String gpudbURL = this.sourceConfig.get(KineticaSourceConnector.PARAM_URL);
+            String tableName = sourceConfig.get(KineticaSourceConnector.PARAM_TABLE_NAMES);
 
             GPUdb gpudb = new GPUdb(gpudbURL);
 
@@ -172,7 +172,7 @@ public class TestConnector {
         return task;
     }
 
-    public KineticaSinkTask startSinkConnector(Map<String,String> sinkConfig) throws Exception {
+    public static KineticaSinkTask startSinkConnector(Map<String,String> sinkConfig) throws Exception {
         KineticaSinkConnector sinkConnector = new KineticaSinkConnector();
         sinkConnector.start(sinkConfig);
 
@@ -193,8 +193,8 @@ public class TestConnector {
 
     public void insertTableRecs(Map<String,String> sourceConfig, long numRecs) throws Exception {
 
-        String gpudbURL = sourceConfig.get(KineticaSourceConnector.URL_CONFIG);
-        String tableName = sourceConfig.get(KineticaSourceConnector.TABLE_NAMES_CONFIG);
+        String gpudbURL = sourceConfig.get(KineticaSourceConnector.PARAM_URL);
+        String tableName = sourceConfig.get(KineticaSourceConnector.PARAM_TABLE_NAMES);
         GPUdb gpudb = new GPUdb(gpudbURL);
 
         LOG.info("Generating {} records ", numRecs);
@@ -218,7 +218,7 @@ public class TestConnector {
     }
 
     @SuppressWarnings({ "unchecked", "rawtypes" })
-    public Map<String,String> getConfig(String fileName) throws Exception {
+    public static Map<String,String> getConfig(String fileName) throws Exception {
         Properties props = new Properties();
         try (Reader propsReader = new FileReader(fileName)) {
             LOG.info("Loading properties: {}", fileName);

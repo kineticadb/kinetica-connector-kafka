@@ -20,44 +20,69 @@ import org.apache.kafka.connect.sink.SinkConnector;
  * performs the work of writing data from Kafka into the target table.
  */
 public class KineticaSinkConnector extends SinkConnector {
-	/** Config file key for Kinetica URL */
-	public static final String URL_CONFIG = "kinetica.url";
 
-	/** Config file key for Kinetica username */
-	public static final String USERNAME_CONFIG = "kinetica.username";
+    // config params
+	public static final String PARAM_URL = "kinetica.url";
+	public static final String PARAM_USERNAME = "kinetica.username";
+	public static final String PARAM_PASSWORD = "kinetica.password";
+	public static final String PARAM_TIMEOUT = "kinetica.timeout";
+	public static final String PARAM_COLLECTION = "kinetica.collection_name";
+    public static final String PARAM_BATCH_SIZE = "kinetica.batch_size";
+    public static final String PARAM_DEST_TABLE_OVERRIDE = "kinetica.dest_table_override";
+	public static final String PARAM_TABLE_PREFIX = "kinetica.table_prefix";
+    public static final String PARAM_CREATE_TABLE = "kinetica.create_table";
 
-	/** Config file key for Kinetica password */
-	public static final String PASSWORD_CONFIG = "kinetica.password";
+	private static final String DEFAULT_TIMEOUT = "0";
+	private static final String DEFAULT_BATCH_SIZE = "10000";
+	private static final String PARAM_GROUP = "Kinetica Properties";
 
-	/** Config file key for Kinetica request/response timeouts */
-	public static final String TIMEOUT_CONFIG = "kinetica.timeout";
+	public static final ConfigDef CONFIG_DEF =  new ConfigDef()
+                .define(PARAM_URL, ConfigDef.Type.STRING,
+                        ConfigDef.Importance.HIGH,
+                        "Kinetica URL, e.g. 'http://localhost:9191'",
+                        PARAM_GROUP, 1, ConfigDef.Width.SHORT, "Kinetica URL")
 
-	/** Config file key for name of Kinetica collection containing target table */
-	public static final String COLLECTION_NAME_CONFIG = "kinetica.collection_name";
+                .define(PARAM_USERNAME, ConfigDef.Type.STRING, "",
+                        ConfigDef.Importance.MEDIUM,
+                        "Kinetica username (optional)",
+                        PARAM_GROUP, 2, ConfigDef.Width.SHORT, "Username")
 
-	/** Config file key for name of Kinetica table to use as streaming target */
-	//public static final String TABLE_NAME_CONFIG = "kinetica.table_name";
+                .define(PARAM_PASSWORD, ConfigDef.Type.STRING, "",
+                        ConfigDef.Importance.MEDIUM,
+                        "Kinetica password (optional)",
+                        PARAM_GROUP, 3, ConfigDef.Width.SHORT, "Password")
 
-	/** String to prepend to table names from the message schema. */
-	public static final String TABLE_PREFIX_CONFIG = "kinetica.table_prefix";
+                .define(PARAM_COLLECTION, ConfigDef.Type.STRING,
+                        ConfigDef.Importance.HIGH,
+                        "Kinetica collection name (optional, default--no collection name)",
+                        PARAM_GROUP, 4, ConfigDef.Width.LONG, "Collection Name")
 
-	/** Config file key for # of records to collect before writing to Kinetica */
-	public static final String BATCH_SIZE_CONFIG = "kinetica.batch_size";
+                .define(PARAM_TABLE_PREFIX, ConfigDef.Type.STRING, "",
+                        ConfigDef.Importance.HIGH,
+                        "Prefix applied to tablenames from Kafka schema. (optional)",
+                        PARAM_GROUP, 5, ConfigDef.Width.LONG, "Table Prefix")
 
+                .define(PARAM_DEST_TABLE_OVERRIDE, ConfigDef.Type.STRING, "",
+                        ConfigDef.Importance.HIGH,
+                        "Table name that will replace name automatically generated from the schema. (optional)",
+                        PARAM_GROUP, 6, ConfigDef.Width.LONG, "Table Override")
 
-	public static final String DEFAULT_TIMEOUT = "0";
-	public static final String DEFAULT_BATCH_SIZE = "10000";
+                .define(PARAM_TIMEOUT, ConfigDef.Type.INT, DEFAULT_TIMEOUT, Range.atLeast(0),
+                        ConfigDef.Importance.LOW,
+                        "Kinetica timeout (ms) (optional, default " + DEFAULT_TIMEOUT + "); 0 = no timeout",
+                        PARAM_GROUP, 7, ConfigDef.Width.SHORT, "Connection Timeout")
 
-	private Map<String, String> config;
-	public static ConfigDef CONFIG_DEF =  new ConfigDef()
-				.define(URL_CONFIG, ConfigDef.Type.STRING, ConfigDef.Importance.HIGH, "Kinetica URL, e.g. 'http://localhost:9191'","Kinetica Properties",1,ConfigDef.Width.SHORT,"Kinetica URL")
-				.define(TIMEOUT_CONFIG, ConfigDef.Type.INT, DEFAULT_TIMEOUT, Range.atLeast(0),ConfigDef.Importance.HIGH, "Kinetica timeout (ms) (optional, default " + DEFAULT_TIMEOUT + "); 0 = no timeout","Kinetica Properties",2,ConfigDef.Width.SHORT,"Timeout")
-				.define(COLLECTION_NAME_CONFIG, ConfigDef.Type.STRING, ConfigDef.Importance.HIGH, "Kinetica collection name (optional, default--no collection name)","Kinetica Properties",3,ConfigDef.Width.LONG,"Collection Name")
-			   // .define(TABLE_NAME_CONFIG, ConfigDef.Type.STRING, ConfigDef.Importance.HIGH, "Kinetica table name","Kinetica Properties",4,ConfigDef.Width.LONG,"Table Name")
-				.define(TABLE_PREFIX_CONFIG, ConfigDef.Type.STRING, "", ConfigDef.Importance.LOW, "Kinetica table prefix","Kinetica Properties",4,ConfigDef.Width.LONG,"Table Prefix")
-				.define(USERNAME_CONFIG, ConfigDef.Type.STRING, "", ConfigDef.Importance.HIGH, "Kinetica username (optional)","Kinetica Properties",5,ConfigDef.Width.SHORT,"Username")
-				.define(PASSWORD_CONFIG, ConfigDef.Type.STRING, "", ConfigDef.Importance.HIGH, "Kinetica password (optional)","Kinetica Properties",6,ConfigDef.Width.SHORT,"Password")
-				.define(BATCH_SIZE_CONFIG, ConfigDef.Type.INT, DEFAULT_BATCH_SIZE, Range.atLeast(1), ConfigDef.Importance.HIGH, "Kinetica batch size (optional, default " + DEFAULT_BATCH_SIZE + ")","Kinetica Properties",7,ConfigDef.Width.SHORT,"Batch Size");
+                .define(PARAM_BATCH_SIZE, ConfigDef.Type.INT, DEFAULT_BATCH_SIZE, Range.atLeast(1),
+                        ConfigDef.Importance.LOW,
+                        "Kinetica batch size (optional, default " + DEFAULT_BATCH_SIZE + ")",
+                        PARAM_GROUP, 8, ConfigDef.Width.SHORT, "Batch Size")
+
+                .define(PARAM_CREATE_TABLE, ConfigDef.Type.BOOLEAN, true,
+                        ConfigDef.Importance.LOW,
+                        "Create missing tables. (optional, default true)",
+                        PARAM_GROUP, 9, ConfigDef.Width.SHORT, "Create Table");
+
+    private final Map<String, String> config = new HashMap<>();
 
 	@Override
 	public String version() {
@@ -67,18 +92,26 @@ public class KineticaSinkConnector extends SinkConnector {
 	@Override
 	public void start(Map<String, String> props) {
 		Map<String,Object> configParsed = KineticaSinkConnector.CONFIG_DEF.parse(props);
-		config = new HashMap<String,String>();
 		for (Map.Entry<String, Object> entry : configParsed.entrySet()) {
-			config.put(entry.getKey(), entry.getValue().toString());
+			this.config.put(entry.getKey(), entry.getValue().toString());
 		}
 
+		String connectUrl = props.get(KineticaSinkConnector.PARAM_URL);
 		try {
-			new URL(props.get(URL_CONFIG));
+			new URL(connectUrl);
 		} catch (MalformedURLException ex) {
-			throw new IllegalArgumentException("Invalid URL (" + props.get(URL_CONFIG) + ").");
+			throw new IllegalArgumentException("Invalid URL (" + connectUrl + ").");
 		}
-
 	}
+
+    @Override
+    public void stop() {
+    }
+
+    @Override
+    public ConfigDef config() {
+        return(KineticaSinkConnector.CONFIG_DEF);
+    }
 
 	@Override
 	public Class<? extends Task> taskClass() {
@@ -90,17 +123,8 @@ public class KineticaSinkConnector extends SinkConnector {
 		List<Map<String, String>> taskConfigs = new ArrayList<>();
 
 		for (int i = 0; i < maxTasks; i++) {
-			taskConfigs.add(new HashMap<>(config));
+			taskConfigs.add(new HashMap<>(this.config));
 		}
 		return taskConfigs;
-	}
-
-	@Override
-	public void stop() {
-	}
-
-	@Override
-	public ConfigDef config() {
-		return(KineticaSinkConnector.CONFIG_DEF);
 	}
 }
