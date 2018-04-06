@@ -13,6 +13,9 @@ import org.apache.kafka.common.config.ConfigDef.Range;
 import org.apache.kafka.common.utils.AppInfoParser;
 import org.apache.kafka.connect.connector.Task;
 import org.apache.kafka.connect.source.SourceConnector;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 
 /**
  * Kafka SourceConnector for streaming data from a GPUdb table.
@@ -21,36 +24,53 @@ import org.apache.kafka.connect.source.SourceConnector;
  * performs the work of pulling data from the source into Kafka.
  */
 public class KineticaSourceConnector extends SourceConnector {
-    /** Config file key for Kinetica URL */
-    public static final String URL_CONFIG = "kinetica.url";
 
-    /** Config file key for Kinetica username */
-    public static final String USERNAME_CONFIG = "kinetica.username";
+    private static final Logger LOG = LoggerFactory.getLogger(KineticaSinkTask.class);
 
-    /** Config file key for Kinetica password */
-    public static final String PASSWORD_CONFIG = "kinetica.password";
-
-    /** Config file key for Kinetica request/response timeouts */
-    public static final String TIMEOUT_CONFIG = "kinetica.timeout";
-
-    /** Config file key for names of Kinetica tables to use as streaming sources */
-    public static final String TABLE_NAMES_CONFIG = "kinetica.table_names";
-
-    /** Config file key for token prepended to each source table name to form
-     *  the name of the corresponding Kafka topic into which those records will
-     *  be queued */
+    // Config params
+    public static final String PARAM_URL = "kinetica.url";
+    public static final String PARAM_USERNAME = "kinetica.username";
+    public static final String PARAM_PASSWORD = "kinetica.password";
+    public static final String PARAM_TIMEOUT = "kinetica.timeout";
+    public static final String PARAM_TABLE_NAMES = "kinetica.table_names";
     public static final String TOPIC_PREFIX_CONFIG = "kinetica.topic_prefix";
 
+
+    private static final String PARAM_GROUP = "Kinetica Properties";
     private static final String DEFAULT_TIMEOUT = "0";
 
-    private Map<String, String> config;
-    public static ConfigDef CONFIG_DEF = new ConfigDef()
-                .define(URL_CONFIG, ConfigDef.Type.STRING, ConfigDef.Importance.HIGH, "Kinetica URL, e.g. 'http://localhost:9191'","Kinetica Properties",1,ConfigDef.Width.LONG,"Kinetica URL")
-                .define(TIMEOUT_CONFIG, ConfigDef.Type.INT,DEFAULT_TIMEOUT,Range.atLeast(0), ConfigDef.Importance.HIGH, "Kinetica timeout (ms) (optional, default " + DEFAULT_TIMEOUT + "); 0 = no timeout","Kinetica Properties",2,ConfigDef.Width.SHORT,"Timeout")
-                .define(TABLE_NAMES_CONFIG, ConfigDef.Type.STRING, ConfigDef.Importance.HIGH, "Kinetica table names (comma-separated)","Kinetica Properties",3,ConfigDef.Width.LONG,"Table Names")
-                .define(TOPIC_PREFIX_CONFIG, ConfigDef.Type.STRING, ConfigDef.Importance.HIGH, "Kafka topic prefix","Kinetica Properties",4,ConfigDef.Width.SHORT,"Topic Prefix")
-                .define(USERNAME_CONFIG, ConfigDef.Type.STRING, "",ConfigDef.Importance.HIGH, "Kinetica username (optional)","Kinetica Properties",5,ConfigDef.Width.SHORT,"Username")
-                .define(PASSWORD_CONFIG, ConfigDef.Type.STRING, "",ConfigDef.Importance.HIGH, "Kinetica password (optional)","Kinetica Properties",6,ConfigDef.Width.SHORT,"Password");
+    private final static ConfigDef CONFIG_DEF = new ConfigDef()
+                .define(PARAM_URL, ConfigDef.Type.STRING,
+                        ConfigDef.Importance.HIGH,
+                        "Kinetica URL, e.g. 'http://localhost:9191'",
+                        PARAM_GROUP, 1, ConfigDef.Width.LONG, "Kinetica URL")
+
+                .define(PARAM_TIMEOUT, ConfigDef.Type.INT, DEFAULT_TIMEOUT, Range.atLeast(0),
+                        ConfigDef.Importance.LOW,
+                        "Kinetica timeout (ms) (optional, default " + DEFAULT_TIMEOUT + "); 0 = no timeout",
+                        PARAM_GROUP, 2, ConfigDef.Width.SHORT, "Timeout")
+
+                .define(PARAM_TABLE_NAMES, ConfigDef.Type.STRING,
+                        ConfigDef.Importance.HIGH,
+                        "Kinetica table names (comma-separated)",
+                        PARAM_GROUP, 3, ConfigDef.Width.LONG, "Table Names")
+
+                .define(TOPIC_PREFIX_CONFIG, ConfigDef.Type.STRING,
+                        ConfigDef.Importance.MEDIUM,
+                        "Prefix to prepend to source table when generating topic name.",
+                        PARAM_GROUP, 4, ConfigDef.Width.SHORT, "Topic Prefix")
+
+                .define(PARAM_USERNAME, ConfigDef.Type.STRING, "",
+                        ConfigDef.Importance.MEDIUM,
+                        "Kinetica username (optional)",
+                        PARAM_GROUP, 5, ConfigDef.Width.SHORT, "Username")
+
+                .define(PARAM_PASSWORD, ConfigDef.Type.STRING, "",
+                        ConfigDef.Importance.MEDIUM,
+                        "Kinetica password (optional)",
+                        PARAM_GROUP, 6, ConfigDef.Width.SHORT, "Password");
+
+    private final Map<String, String> config = new HashMap<>();
 
     @Override
     public String version() {
@@ -59,17 +79,27 @@ public class KineticaSourceConnector extends SourceConnector {
 
     @Override
     public void start(Map<String, String> props) {
+
         Map<String,Object> configParsed = KineticaSourceConnector.CONFIG_DEF.parse(props);
-        config = new HashMap<String,String>();
         for (Map.Entry<String, Object> entry : configParsed.entrySet()) {
-            config.put(entry.getKey(), entry.getValue().toString());
+            this.config.put(entry.getKey(), entry.getValue().toString());
         }
 
+        String connectUrl = props.get(KineticaSourceConnector.PARAM_URL);
         try {
-            new URL(props.get(URL_CONFIG));
+            new URL(connectUrl);
         } catch (MalformedURLException ex) {
-            throw new IllegalArgumentException("Invalid URL (" + props.get(URL_CONFIG) + ").");
+            throw new IllegalArgumentException("Invalid URL (" + connectUrl + ").");
         }
+    }
+
+    @Override
+    public void stop() {
+    }
+
+    @Override
+    public ConfigDef config() {
+        return KineticaSourceConnector.CONFIG_DEF;
     }
 
     @Override
@@ -79,34 +109,28 @@ public class KineticaSourceConnector extends SourceConnector {
 
     @Override
     public List<Map<String, String>> taskConfigs(int maxTasks) {
-        List<String> tables = Arrays.asList(config.get(TABLE_NAMES_CONFIG).split(","));
+        List<String> tables = Arrays.asList(this.config.get(PARAM_TABLE_NAMES).split(","));
 
         int partitionSize = tables.size() / maxTasks;
         int partitionExtras = tables.size() % maxTasks;
         List<Map<String, String>> taskConfigs = new ArrayList<>();
 
-        for (int i = 0; i < maxTasks; i++) {
-            int partitionStart = i * partitionSize + Math.min(i, partitionExtras);
-            int partitionEnd = (i + 1) * partitionSize + Math.min(i + 1, partitionExtras);
-
+        for (int taskNum = 0; taskNum < maxTasks; taskNum++) {
+            int partitionStart = taskNum * partitionSize + Math.min(taskNum, partitionExtras);
+            int partitionEnd = (taskNum + 1) * partitionSize + Math.min(taskNum + 1, partitionExtras);
             if (partitionStart == partitionEnd) {
+                LOG.info("Not creating task<{}> (partitionStart == partitionEnd)", taskNum);
                 break;
             }
 
-            Map<String, String> taskConfig = new HashMap<>(config);
-            taskConfig.put(TABLE_NAMES_CONFIG, String.join(",", tables.subList(partitionStart, partitionEnd)));
+            String tableNames = String.join(",", tables.subList(partitionStart, partitionEnd));
+            LOG.info("Configuring task <{}> for tables [{}]", taskNum, tableNames);
+
+            Map<String, String> taskConfig = new HashMap<>(this.config);
+            taskConfig.put(PARAM_TABLE_NAMES, tableNames);
             taskConfigs.add(taskConfig);
         }
 
         return taskConfigs;
-    }
-
-    @Override
-    public void stop() {
-    }
-
-    @Override
-    public ConfigDef config() {
-        return(CONFIG_DEF);
     }
 }

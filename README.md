@@ -73,22 +73,30 @@ parameters:
 | `kinetica.username`| N | Username for authentication |
 | `kinetica.password`| N | Password for authentication |
 | `kinetica.table_prefix`| N | Prefix for destination tables (see below) |
+| `kinetica.dest_table_override`| N | Override for table name. (see below) |
 | `kinetica.collection_name`| Y | Collection to put the table in (default is empty) |
 | `kinetica.batch_size`| N | The number of records to insert at one time (default = 10000) |
 | `kinetica.timeout`| N | Timeout in milliseconds (default = 1000) |
+| `kinetica.create_table`| N | Automatically create missing table. (default = true) |
 
 The connector determines the name of the destination table based on the Avro schema attached to the
-message. You can use the optional  `table_prefix` parameter to have it prepend a token to the table
+message.
+
+You can use the optional  `table_prefix` parameter to have it prepend a token to the table
 name. This is useful for testing where you have a source connector reading from multiple tables and
 you want the sink connector to write to different tables in the same database.
 
-**Note:** This connector does not permit schema-less SinkRecords so you must add the following
-lines to the `connect-standalone.properties` before running `connect-standalone.sh`:
+You can also use the optional `dest_table_override` parameter to manually specify a table name not
+generated from the Kafka schema.
+
+**Note:** This connector does not permit sinking from schema-less records in the Kafka commit log so you
+must add the following lines to the `connect-standalone.properties` before running `connect-standalone`:
+
 ```
-key.converter.schemas.enable=true
-key.converter=org.apache.kafka.connect.json.JsonConverter
-value.converter.schemas.enable=true
-value.converter=org.apache.kafka.connect.json.JsonConverter
+key.converter = org.apache.kafka.connect.json.JsonConverter
+key.converter.schemas.enable = true
+value.converter = org.apache.kafka.connect.json.JsonConverter
+value.converter.schemas.enable = true
 ```
 
 **Warning:** If the target table does not exist the connector will create it based on the information
@@ -150,7 +158,7 @@ usage: TestDataPump [options] URL
 The below example runs the datapump with default options and will insert batches of 10 records every
 3 seconds.
 ```
-java -cp kafka-connector-6.2.0-jar-with-dependencies.jar \
+java -cp kafka-connector-7.0.0-jar-with-dependencies.jar \
     com.kinetica.kafka.tests.TestDataPump \
     http://gpudb:9191
 ```
@@ -169,76 +177,86 @@ Create a configuration file `connect-standalone.properties`. Below is an example
 
 ```
 # This should point to your Kafka broker
-bootstrap.servers=broker:9092
+bootstrap.servers = broker:9092
 
 offset.storage.file.filename=/tmp/connect.offsets
-offset.flush.interval.ms=5000
-rest.port=8083
+offset.flush.interval.ms = 5000
 
-# Make sure your connector jar is in this path
-plugin.path=/opt/connect-test
+# This port must not be used by another process on the host.
+rest.port = 8083
 
-# needed for Kinetica
-key.converter.schemas.enable=true
-key.converter=org.apache.kafka.connect.json.JsonConverter
-value.converter.schemas.enable=true
-value.converter=org.apache.kafka.connect.json.JsonConverter
+# Make sure your connector jar is in this path.
+plugin.path = /opt/connect-test
 
-internal.key.converter=org.apache.kafka.connect.json.JsonConverter
-internal.value.converter=org.apache.kafka.connect.json.JsonConverter
-internal.key.converter.schemas.enable=false
-internal.value.converter.schemas.enable=false
+# Key is stored in commit log with JSON schema.
+key.converter = org.apache.kafka.connect.json.JsonConverter
+key.converter.schemas.enable = true
+
+# Value is stored in commit log with JSON schema.
+value.converter = org.apache.kafka.connect.json.JsonConverter
+value.converter.schemas.enable = true
+
+# Leave internal key parameters alone
+internal.key.converter = org.apache.kafka.connect.json.JsonConverter
+internal.key.converter.schemas.enable = false
+internal.value.converter = org.apache.kafka.connect.json.JsonConverter
+internal.value.converter.schemas.enable = false
 ```
 
 Create a configuration file `source.properties` for the source connector:
 
 ```
 # Connector API required config
-name=TwitterSourceConnector
-connector.class=com.kinetica.kafka.KineticaSourceConnector
-tasks.max=1
+name = TwitterSourceConnector
+connector.class = com.kinetica.kafka.KineticaSourceConnector
+tasks.max = 1
 
 # Kinetic specific config
-kinetica.url=http://localhost:9191
-kinetica.table_names=KafkaConnectorTest,KafkaConnectorTest2
-kinetica.timeout=1000
-kinetica.topic_prefix=Tweets.
+kinetica.url = http://localhost:9191
+kinetica.table_names = KafkaConnectorTest,KafkaConnectorTest2
+kinetica.timeout = 1000
+kinetica.topic_prefix = Tweets.
 ```
 
 Create a configuration file `sink.properties` for the sink connector:
 
 ```
-name=TwitterSinkConnector
-topics=Tweets.KafkaConnectorTest,Tweets.KafkaConnectorTest2
-connector.class=com.kinetica.kafka.KineticaSinkConnector
-tasks.max=1
+name = TwitterSinkConnector
+topics = Tweets.KafkaConnectorTest,Tweets.KafkaConnectorTest2
+connector.class = com.kinetica.kafka.KineticaSinkConnector
+tasks.max = 1
 
 # Kinetic specific config
-kinetica.url=http://localhost:9191
-kinetica.collection_name=TEST
-kinetica.table_prefix=out_
-kinetica.timeout=1000
-kinetica.batch_size=100
+kinetica.url = http://localhost:9191
+kinetica.collection_name = TEST
+kinetica.table_prefix = out_
+kinetica.timeout = 1000
+kinetica.batch_size = 100
 ```
 
 The rest of this system test will require three terminal windows.
 
 * In terminal 1, start *zookeeper* and *kafka*:
+
 ```sh
 $ cd <path/to/Kafka>
 $ bin/zookeeper-server-start.sh config/zookeeper.properties &
 $ bin/kafka-server-start.sh config/server.properties
 ```
-* In terminal 2, start test datapump. This will create the `KafkaConnectorTest` and `KafkaConnectorTest2` tables and generate insert activity.
+
+* In terminal 2, start test datapump. This will create the `KafkaConnectorTest` and `KafkaConnectorTest2`
+tables and generate insert activity.
+
 ```sh
 $ java -cp kafka-connector-6.2.0-jar-with-dependencies.jar \
     com.kinetica.kafka.tests.TestDataPump <Kinetica url>
 ```
+
 * In terminal 3, start kafka source and sink connectors:
+
 ```sh
-$ export CLASSPATH=<path/to/kafka-connector-6.2.0-jar-with-dependencies.jar>
-$ cd <path/to/Kafka>
-$ bin/connect-standalone.sh \
-    config/connect-standalone.properties <source.properties> <sink.properties>
+$ connect-standalone connect-standalone.properties \
+    source.properties sink.properties
 ```
+
 * Verify that data is copied to tables `out_KafkaConnectorTest` and `out_KafkaConnectorTest2`.
