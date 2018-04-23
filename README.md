@@ -158,7 +158,7 @@ usage: TestDataPump [options] URL
 The below example runs the datapump with default options and will insert batches of 10 records every
 3 seconds.
 ```
-java -cp kafka-connector-7.0.0-jar-with-dependencies.jar \
+java -cp kafka-connector-6.2.0-jar-with-dependencies.jar \
     com.kinetica.kafka.tests.TestDataPump \
     http://gpudb:9191
 ```
