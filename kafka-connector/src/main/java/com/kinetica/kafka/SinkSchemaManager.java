@@ -128,30 +128,33 @@ public class SinkSchemaManager {
             if(kafkaType == null) {
                 continue;
             }
-
+            List<String> properties = new ArrayList<String>();
+            if( kafkaField.schema().isOptional() ) {
+            	properties.add("nullable");
+            }
             switch (kafkaType) {
                 case BYTES:
-                    columns.add(new Column(kafkaField.name(), ByteBuffer.class));
+                    columns.add(new Column(kafkaField.name(), ByteBuffer.class, properties));
                     break;
 
                 case FLOAT64:
-                    columns.add(new Column(kafkaField.name(), Double.class));
+                    columns.add(new Column(kafkaField.name(), Double.class, properties));
                     break;
 
                 case FLOAT32:
-                    columns.add(new Column(kafkaField.name(), Float.class));
+                    columns.add(new Column(kafkaField.name(), Float.class, properties));
                     break;
 
                 case INT32:
-                    columns.add(new Column(kafkaField.name(), Integer.class));
+                    columns.add(new Column(kafkaField.name(), Integer.class, properties));
                     break;
 
                 case INT64:
-                    columns.add(new Column(kafkaField.name(), Long.class));
+                    columns.add(new Column(kafkaField.name(), Long.class, properties));
                     break;
 
                 case STRING:
-                    columns.add(new Column(kafkaField.name(), String.class));
+                    columns.add(new Column(kafkaField.name(), String.class, properties));
                     break;
 
                 default:
