@@ -1,0 +1,64 @@
+kafka-connect-kinetica
+Copyright (c) 2018 Kinetica DB Inc.
+
+The following libraries are included in packaged versions of this project:
+* Apache Avro
+    * COPYRIGHT: 2009-2014 The Apache Software Foundation
+    * LICENSE: licenses/LICENSE.apache2.0.txt
+    * HOMEPAGE: http://avro.apache.org
+
+* Apache Commons CLI
+    * COPYRIGHT: 2001-2009 The Apache Software Foundation
+    * LICENSE: licenses/LICENSE.apache2.0.txt
+    * HOMEPAGE: http://avro.apache.org
+
+* Apache Commons Codec
+    * COPYRIGHT: 2002-2014 The Apache Software Foundation
+    * LICENSE: licenses/LICENSE.apache2.0.txt
+    * HOMEPAGE: http://commons.apache.org/proper/commons-codec
+
+* Apache Commons IO 
+    * COPYRIGHT: 2002-2012 The Apache Software Foundation
+    * LICENSE: licenses/LICENSE.apache2.0.txt
+    * HOMEPAGE: http://avro.apache.org
+
+* Jackson JSON core
+    * COPYRIGHT: 2009-2016 The Apache Software Foundation
+    * LICENSE: licenses/LICENSE.apache2.0.txt
+    * HOMEPAGE: http://avro.apache.org
+
+* Jackson JSON mapper
+    * COPYRIGHT: 2009-2016 The Apache Software Foundation
+    * LICENSE: licenses/LICENSE.apache2.0.txt
+    * HOMEPAGE: http://avro.apache.org
+
+* GPUDB API
+    * COPYRIGHT: 2016-2018 Kinetica DB Inc.
+    * LICENSE: LICENSE.txt
+    * HOMEPAGE: https://www.kinetica.com/
+
+* JeroMQ
+    * COPYRIGHT: All source files are copyright © 2007-2018 contributors as 
+noted in the AUTHORS file https://github.com/zeromq/jeromq/blob/master/AUTHORS
+    * LICENSE: licenses/LICENSE-jeromq.txt (Mozilla Public License v 2.0)
+    * HOMEPAGE: https://github.com/zeromq/jeromq
+
+* Paranamer
+    * COPYRIGHT: 2006 Paul Hammant & ThoughtWorks Inc
+    * LICENSE:  licenses/LICENSE-paranamer.txt
+    * HOMEPAGE: http://xircles.codehaus.org/projects/paranamer
+
+* snappy-java
+  * LICENSE: licenses/LICENSE.bsd.txt (New BSD License)
+  * HOMEPAGE: https://github.com/xerial/snappy-java
+
+* SLF4J
+    * COPYRIGHT: Copyright (c) 2004-2013 QOS.ch
+    * LICENSE: licenses/LICENSE.slf4j.txt
+    * HOMEPAGE: http://www.slf4j.org/
+
+* XZ 
+    * COPYRIGHT: Original Author: Lasse Collin <lasse.collin@tukaani.org>
+    * License: Public Domain 
+    * HOMEPAGE: http://tukaani.org/xz/java.html
+
