@@ -1,0 +1,8 @@
+kafka-connect-kinetica/.classpath
+kafka-connect-kinetica/.project
+kafka-connect-kinetica/.settings/
+kafka-connect-kinetica/target/
+test-connect/.classpath
+test-connect/.project
+test-connect/.settings/
+test-contect/target/ 
