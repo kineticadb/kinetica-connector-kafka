@@ -37,7 +37,7 @@ running Kinetica Kafka connectors in standalone mode or to a cluster.
 
 Kinetica Kafka connector has a property parameter in the `pom.xml` properties to set **Kafka** version. 
 Connector build process would add **Kafka** version to the jar name for easy reference: 
-`kafka-2.0.0-connector-kinetica-6.2.0-jar-with-dependencies.jar`. 
+`kafka-2.0.0-connector-kinetica-6.2.1-SNAPSHOT-jar-with-dependencies.jar`. 
 Connector code is Java 7 compatible and does not require a separate build to support Java 8 environment. 
 
 **Kafka Connect** allows you to configure the Kinetica Kafka Connector exactly the same for 
@@ -59,7 +59,7 @@ version, edit `pom.xml` project properties to build connector compatible with yo
 Clone and build the project as follows: 
 
 ```sh
-git clone https://github.com/gisfederal/kinetica-connector-kafka
+git clone https://github.com/kineticadb/kinetica-connector-kafka
 cd kinetica-connector-kafka/kafka-connect-kinetica
 mvn clean compile package -DskipTests=true
 ```
@@ -324,14 +324,14 @@ The below example (built for kafka 2.0.0 amd kinetica 6.2.1) runs the datapump w
 Kinetica instance (not password-protected) and will insert batches of 10 records every 3 seconds.
 
 ```sh
-java -cp kafka-2.0.0-connector-kinetica-6.2.1-tests.jar:kafka-2.0.0-connector-kinetica-6.2.1-jar-with-dependencies.jar \
+java -cp kafka-2.0.0-connector-kinetica-6.2.1-tests.jar:kafka-2.0.0-connector-kinetica-6.2.1-SNAPSHOT-jar-with-dependencies.jar \
     com.kinetica.kafka.TestDataPump http://localhost:9191
 ```
 
 You can also provide a relative path to Kinetica DB instance configuration file that contains URL, username, password and timeout:
 
 ```sh
-java -cp kafka-2.0.0-connector-kinetica-6.2.1-tests.jar:kafka-2.0.0-connector-kinetica-6.2.1-jar-with-dependencies.jar \
+java -cp kafka-2.0.0-connector-kinetica-6.2.1-tests.jar:kafka-2.0.0-connector-kinetica-6.2.1-SNAPSHOT-jar-with-dependencies.jar \
     com.kinetica.kafka.TestDataPump -c config/quickstart-kinetica-sink.properties
 ```
 
@@ -421,7 +421,7 @@ $ bin/kafka-server-start.sh config/server.properties
 tables and generate insert activity.
 
 ```sh
-$ java -cp kafka-2.0.0-connector-kinetica-6.2.0-jar-with-dependencies.jar \
+$ java -cp kafka-2.0.0-connector-kinetica-6.2.1-SNAPSHOT-jar-with-dependencies.jar \
     com.kinetica.kafka.tests.TestDataPump -c <path/to/sink.properties>
 ```
 
