@@ -59,7 +59,7 @@ version, edit `pom.xml` project properties to build connector compatible with yo
 Clone and build the project as follows: 
 
 ```sh
-git clone https://github.com/gisfederal/kinetica-connector-kafka
+git clone https://github.com/kineticadb/kinetica-connector-kafka
 cd kinetica-connector-kafka/kafka-connect-kinetica
 mvn clean compile package -DskipTests=true
 ```
