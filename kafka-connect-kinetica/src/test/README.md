@@ -84,17 +84,17 @@ usage: TestDataPump [options] [URL]
  -t,--total-batches <count>  Number of batches to insert.
 ```
 
-The below example (built for kafka 2.0.0 amd kinetica 6.2.1) runs the datapump with default options and will 
+The below example (built for kafka 2.0.0 amd kinetica 7.0.0.0) runs the datapump with default options and will 
 insert into Kinetica table batches of 10 records every 3 seconds.
 
 ```sh
-java -cp kafka-2.0.0-connector-kinetica-6.2.1-tests.jar:kafka-2.0.0-connector-kinetica-6.2.1-jar-with-dependencies.jar \
+java -cp kafka-2.0.0-connector-kinetica-7.0.0.0-tests.jar:kafka-2.0.0-connector-kinetica-7.0.0.0-jar-with-dependencies.jar \
     com.kinetica.kafka.TestDataPump http://localhost:9191
 ```
 You can also provide a relative path to Kinetica DB instance configuration file that contains URL, username, password and timeout:
 
 ```sh
-java -cp kafka-2.0.0-connector-kinetica-6.2.1-tests.jar:kafka-2.0.0-connector-kinetica-6.2.1-jar-with-dependencies.jar \
+java -cp kafka-2.0.0-connector-kinetica-7.0.0.0-tests.jar:kafka-2.0.0-connector-kinetica-7.0.0.0-jar-with-dependencies.jar \
     com.kinetica.kafka.TestDataPump -c config/quickstart-kinetica-sink.properties
 ```
 

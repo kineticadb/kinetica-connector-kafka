@@ -37,7 +37,7 @@ running Kinetica Kafka connectors in standalone mode or to a cluster.
 
 Kinetica Kafka connector has a property parameter in the `pom.xml` properties to set **Kafka** version. 
 Connector build process would add **Kafka** version to the jar name for easy reference: 
-`kafka-2.0.0-connector-kinetica-6.2.1-SNAPSHOT-jar-with-dependencies.jar`. 
+`kafka-2.0.0-connector-kinetica-7.0.0.0-jar-with-dependencies.jar`. 
 Connector code is Java 7 compatible and does not require a separate build to support Java 8 environment. 
 
 **Kafka Connect** allows you to configure the Kinetica Kafka Connector exactly the same for 
@@ -78,11 +78,58 @@ Three JAR files are produced by the Maven build in `kinetica-connector-kafka/tar
 * `kafka-<ver>-connector-kinetica-<ver>-tests.jar` - tests JAR (see below how to use it to test connectivity)
 * `kafka-<ver>-connector-kinetica-<ver>-jar-with-dependencies.jar` - complete connector JAR
 
+## Kinetica Kafka Connector Plugin
+
+A Kafka Connect plugin is simply a set of JAR files where Kafka Connect can find an 
+implementation of one or more connectors, transforms, and/or converters. Kafka Connect 
+isolates each plugin from one another so that libraries in one plugin are not affected 
+by the libraries in any other plugins. 
+
+A Kafka Connect plugin is either:
+
+* an *uber JAR* containing all of the classfiles for the plugin and its third-party 
+dependencies in a single JAR file; see
+
+```bash
+kinetica-connector-kafka/kafka-connect-kinetica/target/kafka-<ver>-connector-kinetica-<ver>-jar-with-dependencies.jar
+```
+  
+OR  
+* a *directory* on the file system that contains the JAR files for the plugin and 
+its third-party dependencies, see
+
+```bash
+kinetica-connector-kafka/kafka-connect-kinetica/target/kafka-<ver>-connector-kinetica-<ver>-package
+|-- etc
+    |-- kafka-connect-kinetica
+        |-- quickstart-kinetica-sink.properties
+        |-- quickstart-kinetica-source.properties
+|-- share
+    |-- doc
+        |-- kafka-connect-kinetica
+            |-- licenses
+                |-- LICENSE.apache2.0.txt
+                |-- LICENSE.bsd.txt
+                |-- ...
+            |-- LICENSE
+            |-- NOTICE
+            |-- version.txt
+    |-- java
+        |-- kafka-connect-kinetica
+            |-- ...
+            |-- kafka-connect-kinetica-<ver>.jar            
+            |-- ...
+            |-- xz-1.5.jar            
+```
+
+
 ### Installing Kinetica Kafka Connector on plain Kafka stack
 
-To install the connector at the target server location for plain **Kafka**, copy the jar 
-`kafka-<ver>-connector-kinetica-<ver>-jar-with-dependencies.jar` into `KAFKA_HOME/libs/` folder and edit 
-`KAFKA_HOME/config/connect-standalone.properties` file. Any additional properties files you might
+To install the connector at the target server location for plain **Kafka**, copy the uber JAR 
+`kafka-<ver>-connector-kinetica-<ver>-jar-with-dependencies.jar` into `KAFKA_HOME/libs/` folder and make 
+sure configuration in `KAFKA_HOME/config/connect-distributed.properties` and 
+`KAFKA_HOME/config/connect-standalone.properties` files matches the configuration you've tested 
+with your Kafka connector. Any additional properties files you might
 need should go in the same folder `KAFKA_HOME/config/`.
 
 ### Installing Kinetica Kafka Connector on Confluent platform
@@ -101,12 +148,30 @@ mkdir /CONFLUENT_HOME/share/doc/kafka-connect-kinetica
 cp target/kafka-<ver>-connector-kinetica-<ver>-package/share/doc/* /CONFLUENT_HOME/share/doc/kafka-connect-kinetica/
 ```
 
+> Instead of copying multiple jars into `/CONFLUENT_HOME/share/java/kafka-connect-kinetica/` you can copy the uber JAR. 
 > **Note** Following this convention accurately when naming folders and placing connector jar and its configuration properties accordingly is essential to load and start/stop the connector remotely through REST service. Unique Connector name in quickstart properties would be passed to REST service.
 > `kafka-connect-kinetica` folder name would be treated both as the connector identification and as a part of the path built on the fly when the connector is engaged. 
 > Starting folder name with `kafka-connect-<connector name>` is a Confluent convention used for all Kafka Connect components, such as jdbc, s3, hdfs, and others.
 
 
-### Configuration files location and purpose
+## Kinetica Kafka Connector Plugin Deployment considerations
+
+Users can run Kafka Connect in two ways: standalone mode or distributed mode.
+
+In *standalone mode*, a single process runs all the connectors. It is not fault tolerant. 
+Since it uses only a single process, it is not scalable. Standalone mode is used for 
+proof of concept and demo purposes, integration or unit testing, and 
+it is managed through CLI. 
+
+In *distributed mode*, multiple workers run Kafka Connect and are aware of each others'
+existence, which can provide fault tolerance and coordination between them and during the
+event of reconfiguration. In this mode, Kafka Connect is scalable and fault tolerant, 
+so it is generally used in production deployment. Distributed mode provides flexibility, 
+scalability and high availability, it's mostly used in production in cases of heavy 
+data volume, and it is managed through REST interface.
+
+
+### Standalone mode 
 
 When testing the connector in standalone mode, use the following syntax:
 
@@ -135,7 +200,163 @@ very useful to have separate configuration files named `connect-standalone-sink.
 and `connect-standalone-source.properties` with preset port values, such as sink `rest.port=8090` 
 and source `rest.port=8089`. 
 
-For remote REST invocation of sink or source connector please refer to [Confluent web site][CONFLUENT_REST_API]. 
+### Distributed mode
+
+Kafka Connector configuration sent in REST calls has the same config properties that 
+are listed in `connect-standalone-sink.properties` and `connect-standalone-source.properties` 
+for Standalone deployment, but should formatted as an application/json object. For example,
+this is the Source connector JSON:
+
+```bash
+{
+   "name":"kinetica-source-connector",
+   "config":{
+      "name":"kinetica-source-connector",
+      "connector.class":"com.kinetica.kafka.KineticaSourceConnector",
+      "tasks.max":"3",
+      "kinetica.url":"http://localhost:9191",
+      "kinetica.table_names":"KafkaConnectorTest"
+   }
+} 
+```
+
+The value of "name" parameter should be consistent and is the same for outer object (connector) and
+inner (connector config). It is going to be used as connector name as part of the REST endpoint url.
+
+When testing the connector in distributed mode, use the following syntax to start Kafka Connect service:
+
+```sh
+KAFKA_HOME>./bin/connect-distributed.sh config/connect-distributed.properties
+```
+or
+
+```sh
+CONFLUENT_HOME>bin/connect-distributed etc/kafka/connect-distributed.properties 
+```
+
+By default Kafka Connect is listening on port 8083, assuming your bootstrap server ip is 127.0.0.1,
+here are the available REST syntax examples: 
+
+#### GET /connectors
+Check the available connectors:
+
+```sh
+curl -X GET -H "Accept: application/json" http://127.0.0.1:8083/connectors
+#response
+["my-jdbc-source", "my-hdfs-sink"]
+```
+
+#### POST /connectors
+Create a new connector (connector object is returned):
+
+```sh
+curl -X POST -H "Accept: application/json" -H "Content-Type: application/json" --data '{"name":"kinetica-source-connector", "config": {"name":"kinetica-source-connector","connector.class":"com.kinetica.kafka.KineticaSourceConnector","tasks.max":"3","kinetica.url":"http://localhost:9191","kinetica.table_names":"KafkaConnectorTest"}}' http://127.0.0.1:8083/connectors
+#response
+{
+   "name":"kinetica-source-connector",
+   "config":{
+      "name":"kinetica-source-connector",
+      "connector.class":"com.kinetica.kafka.KineticaSourceConnector",
+      "tasks.max":"3",
+      "kinetica.url":"http://localhost:9191",
+      "kinetica.table_names":"KafkaConnectorTest"
+   },
+   "tasks":[],
+   "type":null
+}
+```
+
+#### GET /connectors/(string:name)
+Get info on existing connector (connector object is returned):
+
+```sh
+curl -X GET -H "Accept: application/json" http://127.0.0.1:8083/connectors/kinetica-source-connector
+#response
+{
+   "name":"kinetica-source-connector",
+   "config":{
+      "name":"kinetica-source-connector",
+      "connector.class":"com.kinetica.kafka.KineticaSourceConnector",
+      "tasks.max":"3",
+      "kinetica.url":"http://localhost:9191",
+      "kinetica.table_names":"KafkaConnectorTest"
+   },
+   "tasks":[{"connector":"kinetica-source-connector","task":0}],
+   "type":"source"
+}
+```
+
+#### GET /connectors/(string:name)/tasks
+Variation of the previous call, gets the connectors tasks collection only
+
+```sh
+curl -X GET -H "Accept: application/json" http://127.0.0.1:8083/connectors/kinetica-source-connector/tasks
+#response
+[
+   {
+      "id":{
+         "connector":"kinetica-source-connector",
+         "task":0
+      },
+      "config":{
+         "kinetica.timeout":"0",
+         "kinetica.password":"",
+         "task.class":"com.kinetica.kafka.KineticaSourceTask",
+         "kinetica.url":"http://localhost:9191",
+         "kinetica.kafka_schema_version":"",
+         "kinetica.table_names":"KafkaConnectorTest",
+         "kinetica.topic_prefix":"",
+         "kinetica.username":""
+      }
+   }
+]
+```
+
+#### GET /connectors/(string:name)/config
+Variation of the previous call, gets the connectors config only
+
+```sh
+curl -X GET -H "Accept: application/json" http://127.0.0.1:8083/connectors/kinetica-source-connector/config
+#response
+{
+   "name":"kinetica-source-connector",
+   "connector.class":"com.kinetica.kafka.KineticaSourceConnector",
+   "tasks.max":"3",
+   "kinetica.url":"http://localhost:9191",
+   "kinetica.table_names":"KafkaConnectorTest"
+}
+```
+
+#### PUT /connectors/(string:name)/config
+Reconfigures the running connector (would cascade to reconfiguring its tasks). Please make
+sure that you send only the "config" node from original JSON connector configuration:
+
+```sh
+curl -X PUT -H "Accept: application/json" -H "Content-Type: application/json" --data '{"name":"kinetica-source-connector","connector.class":"com.kinetica.kafka.KineticaSourceConnector","tasks.max":"10","kinetica.url":"http://localhost:9191","kinetica.table_names":"KafkaConnectorTest,KafkaConnectorTest2"}' http://127.0.0.1:8083/connectors/kinetica-source-connector/config
+#response
+{
+   "name":"kinetica-source-connector",
+   "config":{
+      "name":"kinetica-source-connector",
+      "connector.class":"com.kinetica.kafka.KineticaSourceConnector",
+      "tasks.max":"10",
+      "kinetica.url":"http://localhost:9191",
+      "kinetica.table_names":"KafkaConnectorTest,KafkaConnectorTest2"
+   },
+   "tasks":[{"connector":"kinetica-source-connector","task":0}],
+   "type":"source"
+}
+```
+
+#### DELETE /connectors/(string:name)
+Halts connector's tasks, delets the connector and its configuration
+
+```sh
+curl -X DELETE http://127.0.0.1:8083/connectors/kinetica-source-connector
+#no response/ 204 No Content
+```
+
+For more considerations on using Kafka Connect REST API please refer to [Confluent web site][CONFLUENT_REST_API]. 
 [CONFLUENT_REST_API]: <https://docs.confluent.io/current/connect/references/restapi.html>
 
 ## Streaming Data from Kinetica into Kafka
@@ -320,18 +541,18 @@ usage: TestDataPump [options] [URL]
  -t,--total-batches <count>  Number of batches to insert.
 ```
 
-The below example (built for kafka 2.0.0 amd kinetica 6.2.1) runs the datapump with default options on a local 
+The below example (built for kafka 2.0.0 amd kinetica 7.0.0.0) runs the datapump with default options on a local 
 Kinetica instance (not password-protected) and will insert batches of 10 records every 3 seconds.
 
 ```sh
-java -cp kafka-2.0.0-connector-kinetica-6.2.1-tests.jar:kafka-2.0.0-connector-kinetica-6.2.1-SNAPSHOT-jar-with-dependencies.jar \
+java -cp kafka-2.0.0-connector-kinetica-7.0.0.0-tests.jar:kafka-2.0.0-connector-kinetica-7.0.0.0-jar-with-dependencies.jar \
     com.kinetica.kafka.TestDataPump http://localhost:9191
 ```
 
 You can also provide a relative path to Kinetica DB instance configuration file that contains URL, username, password and timeout:
 
 ```sh
-java -cp kafka-2.0.0-connector-kinetica-6.2.1-tests.jar:kafka-2.0.0-connector-kinetica-6.2.1-SNAPSHOT-jar-with-dependencies.jar \
+java -cp kafka-2.0.0-connector-kinetica-7.0.0.0-tests.jar:kafka-2.0.0-connector-kinetica-7.0.0.0-jar-with-dependencies.jar \
     com.kinetica.kafka.TestDataPump -c config/quickstart-kinetica-sink.properties
 ```
 
@@ -421,7 +642,7 @@ $ bin/kafka-server-start.sh config/server.properties
 tables and generate insert activity.
 
 ```sh
-$ java -cp kafka-2.0.0-connector-kinetica-6.2.1-SNAPSHOT-jar-with-dependencies.jar \
+$ java -cp kafka-2.0.0-connector-kinetica-7.0.0.0-jar-with-dependencies.jar \
     com.kinetica.kafka.tests.TestDataPump -c <path/to/sink.properties>
 ```
 

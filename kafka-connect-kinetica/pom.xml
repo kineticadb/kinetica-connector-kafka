@@ -4,7 +4,7 @@
 
     <groupId>com.kinetica</groupId>
     <artifactId>kafka-connect-kinetica</artifactId>
-    <version>6.2.1-SNAPSHOT</version>
+    <version>7.0.0.0</version>
     <packaging>jar</packaging>
 
     <name>Kafka Connector for Kinetica DB</name>
@@ -16,11 +16,25 @@
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven-jar-plugin.version>3.0.2</maven-jar-plugin.version>        
-        <gpudb-api.version>6.2.0</gpudb-api.version>
+        <gpudb-api.version>7.0.0.0</gpudb-api.version>
         <java.version>1.7</java.version>
         <zeromq.version>0.3.5</zeromq.version>
         <kafka.version>2.0.0</kafka.version>
     </properties>
+
+    <distributionManagement>
+       <repository>
+          <id>releases</id>
+          <name>Releases</name>
+          <url>http://files.kinetica.com/nexus/content/repositories/releases</url>
+       </repository>
+       <snapshotRepository>
+          <id>snapshots</id>
+          <name>Snapshots</name>
+          <url>http://files.kinetica.com/nexus/content/repositories/snapshots</url>
+       </snapshotRepository>
+    </distributionManagement>
+
 
     <repositories>
         <repository>
