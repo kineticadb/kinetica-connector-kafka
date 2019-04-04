@@ -37,7 +37,7 @@ running Kinetica Kafka connectors in standalone mode or to a cluster.
 
 Kinetica Kafka connector has a property parameter in the `pom.xml` properties to set **Kafka** version. 
 Connector build process would add **Kafka** version to the jar name for easy reference: 
-`kafka-2.0.0-connector-kinetica-7.0.0.0-jar-with-dependencies.jar`. 
+`kafka-2.0.0-connector-kinetica-7.0.x.y-jar-with-dependencies.jar`. 
 Connector code is Java 7 compatible and does not require a separate build to support Java 8 environment. 
 
 **Kafka Connect** allows you to configure the Kinetica Kafka Connector exactly the same for 
@@ -642,7 +642,7 @@ $ bin/kafka-server-start.sh config/server.properties
 tables and generate insert activity.
 
 ```sh
-$ java -cp kafka-2.0.0-connector-kinetica-7.0.0.0-jar-with-dependencies.jar \
+$ java -cp kafka-2.0.0-connector-kinetica-7.0.0.0-tests.jar:kafka-2.0.0-connector-kinetica-7.0.0.0-jar-with-dependencies.jar \
     com.kinetica.kafka.tests.TestDataPump -c <path/to/sink.properties>
 ```
 

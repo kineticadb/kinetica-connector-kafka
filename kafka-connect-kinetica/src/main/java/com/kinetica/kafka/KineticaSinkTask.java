@@ -53,7 +53,7 @@ public class KineticaSinkTask extends SinkTask {
     private final HashMap<String, BulkInserter<GenericRecord>> biMap = new HashMap<>();
     private final HashMap<String, Type> typeMap = new HashMap<>();
 
-    private final SimpleDateFormat tsFormatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+    private final SimpleDateFormat tsFormatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
     SinkSchemaManager schemaMgr;
 
     /**
@@ -448,9 +448,12 @@ public class KineticaSinkTask extends SinkTask {
             else if(outType == Float.class) {
                 outValue = inNumber.floatValue();
             }
+            else if(outType == String.class && column.getProperties().contains("datetime")) {
+                outValue = tsFormatter.format(new Date(inNumber.longValue()));
+            }
             else {
                 throw new ConnectException(String.format("Could not convert numeric type: %s -> %s",
-                            outType.getName(), inType.getName()));
+                            inType.getName(), outType.getName()));
             }
         }
         else if(inValue instanceof String && column.getProperties().contains("timestamp")) {
