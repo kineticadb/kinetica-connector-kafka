@@ -60,23 +60,24 @@ public class ConnectorConfigHelper {
     
     public static Map<String, String> getParameterizedConfig(String topics, String collection,
             String tablePrefix, String tableOverride, boolean createTable, boolean allowSchemaEvolution,
-            boolean singleTablePerTopic, boolean addNewFields, boolean makeMissingFieldsNullable) throws Exception {
+            boolean singleTablePerTopic, boolean addNewFields, boolean makeMissingFieldsNullable, boolean updateOnExistingPk) throws Exception {
         
         Map<String, String> config = getParameterizedConfig(topics, collection, tablePrefix, tableOverride, createTable, singleTablePerTopic);
 
         config.put(KineticaSinkConnectorConfig.PARAM_ALLOW_SCHEMA_EVOLUTION, Boolean.toString(allowSchemaEvolution));
         config.put(KineticaSinkConnectorConfig.PARAM_ADD_NEW_FIELDS, Boolean.toString(addNewFields));
         config.put(KineticaSinkConnectorConfig.PARAM_MAKE_MISSING_FIELDS_NULLABLE, Boolean.toString(makeMissingFieldsNullable));
+        config.put(KineticaSinkConnectorConfig.PARAM_UPDATE_ON_EXISTING_PK, Boolean.toString(updateOnExistingPk));
         return config;
     }
 
     public static Map<String, String> getParameterizedConfig(String topics, String url, String username, String password,
             int timeout, int batchSize, int retryCount, String collection, String tablePrefix, String tableOverride,
             boolean createTable, boolean allowSchemaEvolution, boolean singleTablePerTopic, boolean addNewFields,
-            boolean makeMissingFieldsNullable) throws Exception {
+            boolean makeMissingFieldsNullable, boolean updateOnExistingPk) throws Exception {
 
         Map<String, String> config = getParameterizedConfig(topics, collection, tablePrefix, tableOverride, createTable, 
-                allowSchemaEvolution, singleTablePerTopic, addNewFields, makeMissingFieldsNullable);
+                allowSchemaEvolution, singleTablePerTopic, addNewFields, makeMissingFieldsNullable, updateOnExistingPk);
 
         config.put(KineticaSinkConnectorConfig.PARAM_USERNAME, username);
         config.put(KineticaSinkConnectorConfig.PARAM_PASSWORD, password);

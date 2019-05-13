@@ -37,7 +37,7 @@ running Kinetica Kafka connectors in standalone mode or to a cluster.
 
 Kinetica Kafka connector has a property parameter in the `pom.xml` properties to set **Kafka** version. 
 Connector build process would add **Kafka** version to the jar name for easy reference: 
-`kafka-2.0.0-connector-kinetica-7.0.0.0-jar-with-dependencies.jar`. 
+`kafka-2.0.0-connector-kinetica-7.0.x.y-jar-with-dependencies.jar`. 
 Connector code is Java 7 compatible and does not require a separate build to support Java 8 environment. 
 
 **Kafka Connect** allows you to configure the Kinetica Kafka Connector exactly the same for 
@@ -436,6 +436,7 @@ that accepts the following parameters:
 | `kinetica.batch_size`| N | The number of records to insert at one time (default = 10000) |
 | `kinetica.timeout`| N | Timeout in milliseconds (default = 1000) |
 | `kinetica.create_table`| N | Automatically create missing table. (default = true) |
+| `kinetica.update_on_existing_pk`| N | Allow UPSERT of data into Kinetica table on existing PK. (default = true) |
 | `kinetica.allow_schema_evolution`| N | Allow schema evolution support for Kafka messages (requires Schema Registry running in Kafka stack). (default = false) |
 | `kinetica.single_table_per_topic`| N | When true, connector attempts to put all incoming messages into a single table. Otherwise creates a table for each individual message type.  (default = false) |
 | `kinetica.add_new_fields_as_columns`| N | When schema evolution is supported and Kafka message has a new field, connector attempts to insert a column for it into Kinetica table. (default = false) |
@@ -642,7 +643,7 @@ $ bin/kafka-server-start.sh config/server.properties
 tables and generate insert activity.
 
 ```sh
-$ java -cp kafka-2.0.0-connector-kinetica-7.0.0.0-jar-with-dependencies.jar \
+$ java -cp kafka-2.0.0-connector-kinetica-7.0.0.0-tests.jar:kafka-2.0.0-connector-kinetica-7.0.0.0-jar-with-dependencies.jar \
     com.kinetica.kafka.tests.TestDataPump -c <path/to/sink.properties>
 ```
 

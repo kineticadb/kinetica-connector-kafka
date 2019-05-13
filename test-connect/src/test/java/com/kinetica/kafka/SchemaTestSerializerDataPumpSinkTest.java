@@ -56,7 +56,7 @@ public class SchemaTestSerializerDataPumpSinkTest {
     public void testAvroSchemaEvolutionSchema1to2() throws Exception {
         // Connector is configured to have an additional table prefix
         String prefix = "test1";
-        Map<String, String> config = ConnectorConfigHelper.getParameterizedConfig(TOPIC, COLLECTION, prefix, "", true, true, true, false, false);
+        Map<String, String> config = ConnectorConfigHelper.getParameterizedConfig(TOPIC, COLLECTION, prefix, "", true, true, true, false, false, true);
 
         // Configure and start connector and sinktask
         KineticaSinkConnector connector = ConnectorConfigHelper.startConnector(config);
@@ -87,7 +87,7 @@ public class SchemaTestSerializerDataPumpSinkTest {
     public void testAvroSchemaEvolutionSchema1to3() throws Exception {
         // Connector is configured to have an additional table prefix
         String prefix = "test2";
-        Map<String, String> config = ConnectorConfigHelper.getParameterizedConfig(TOPIC, COLLECTION, prefix, "", true, true, true, false, false);
+        Map<String, String> config = ConnectorConfigHelper.getParameterizedConfig(TOPIC, COLLECTION, prefix, "", true, true, true, false, false, true);
 
         // Configure and start connector and sinktask
         KineticaSinkConnector connector = ConnectorConfigHelper.startConnector(config);
@@ -118,7 +118,7 @@ public class SchemaTestSerializerDataPumpSinkTest {
     public void testAvroSchemaEvolutionSchema3to1() throws Exception {
         // Connector is configured to have an additional table prefix
         String prefix = "test3";
-        Map<String, String> config = ConnectorConfigHelper.getParameterizedConfig(TOPIC, COLLECTION, prefix, "", true, true, true, false, false);
+        Map<String, String> config = ConnectorConfigHelper.getParameterizedConfig(TOPIC, COLLECTION, prefix, "", true, true, true, false, false, true);
 
         // Configure and start connector and sinktask
         KineticaSinkConnector connector = ConnectorConfigHelper.startConnector(config);
@@ -149,7 +149,7 @@ public class SchemaTestSerializerDataPumpSinkTest {
     public void testAvroSchemaEvolutionSchema1to4() throws Exception {
         // Connector is configured to have an additional table prefix
         String prefix = "test4";
-        Map<String, String> config = ConnectorConfigHelper.getParameterizedConfig(TOPIC, COLLECTION, prefix, "", true, true, true, false, false);
+        Map<String, String> config = ConnectorConfigHelper.getParameterizedConfig(TOPIC, COLLECTION, prefix, "", true, true, true, false, false, true);
 
         // Configure and start connector and sinktask
         KineticaSinkConnector connector = ConnectorConfigHelper.startConnector(config);
@@ -180,7 +180,7 @@ public class SchemaTestSerializerDataPumpSinkTest {
     public void testAvroSchemaEvolutionSchema4to3() throws Exception {
         // Connector is configured to have an additional table prefix
         String prefix = "test5";
-        Map<String, String> config = ConnectorConfigHelper.getParameterizedConfig(TOPIC, COLLECTION, prefix, "", true, true, true, false, false);
+        Map<String, String> config = ConnectorConfigHelper.getParameterizedConfig(TOPIC, COLLECTION, prefix, "", true, true, true, false, false, true);
 
         // Configure and start connector and sinktask
         KineticaSinkConnector connector = ConnectorConfigHelper.startConnector(config);
@@ -211,7 +211,7 @@ public class SchemaTestSerializerDataPumpSinkTest {
     public void testAvroSchemaEvolutionSchema4to0() throws Exception {
         // Connector is configured to have an additional table prefix
         String prefix = "test6";
-        Map<String, String> config = ConnectorConfigHelper.getParameterizedConfig(TOPIC, COLLECTION, prefix, "", true, true, true, false, false);
+        Map<String, String> config = ConnectorConfigHelper.getParameterizedConfig(TOPIC, COLLECTION, prefix, "", true, true, true, false, false, true);
 
         // Configure and start connector and sinktask
         KineticaSinkConnector connector = ConnectorConfigHelper.startConnector(config);

@@ -27,7 +27,7 @@ import com.gpudb.GPUdbException;
 import com.gpudb.GenericRecord;
 import com.gpudb.Type;
 import com.gpudb.Type.Column;
-import com.gpudb.protocol.AlterTableRequest;
+import com.gpudb.protocol.AlterTableColumnsRequest;
 
 //import kafka.common.KafkaException;
 
@@ -53,7 +53,7 @@ public class KineticaSinkTask extends SinkTask {
     private final HashMap<String, BulkInserter<GenericRecord>> biMap = new HashMap<>();
     private final HashMap<String, Type> typeMap = new HashMap<>();
 
-    private final SimpleDateFormat tsFormatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+    private final SimpleDateFormat tsFormatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
     SinkSchemaManager schemaMgr;
 
     /**
@@ -267,10 +267,10 @@ public class KineticaSinkTask extends SinkTask {
             // in case Kinetica table and GPUdb Type have to be updated, old BulkInserter should be flushed 
             this.biMap.get(tableName).flush();
             // match the schemas and get the result of merge
-            List<AlterTableRequest> alterTableRequests = this.schemaMgr.matchSchemas(tableName, genericSchema, gpudbSchema);
+            AlterTableColumnsRequest alterTableRequest = this.schemaMgr.matchSchemas(tableName, genericSchema, gpudbSchema);
             
-            if (alterTableRequests != null && !alterTableRequests.isEmpty()) {
-                gpudbSchema = this.schemaMgr.alterTable(tableName, alterTableRequests);
+            if (!alterTableRequest.getColumnAlterations().isEmpty()) {
+                gpudbSchema = this.schemaMgr.alterTable(tableName, alterTableRequest);
             }    
             
             if (this.typeMap.get(tableName).getColumnCount() != gpudbSchema.getColumnCount()) {
@@ -448,9 +448,12 @@ public class KineticaSinkTask extends SinkTask {
             else if(outType == Float.class) {
                 outValue = inNumber.floatValue();
             }
+            else if(outType == String.class && column.getProperties().contains("datetime")) {
+                outValue = tsFormatter.format(new Date(inNumber.longValue()));
+            }
             else {
                 throw new ConnectException(String.format("Could not convert numeric type: %s -> %s",
-                            outType.getName(), inType.getName()));
+                            inType.getName(), outType.getName()));
             }
         }
         else if(inValue instanceof String && column.getProperties().contains("timestamp")) {

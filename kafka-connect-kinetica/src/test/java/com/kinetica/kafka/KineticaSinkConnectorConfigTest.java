@@ -1,6 +1,8 @@
 package com.kinetica.kafka;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertNotNull;
 
 import java.util.Map;
@@ -76,4 +78,46 @@ public class KineticaSinkConnectorConfigTest {
         KineticaSinkConnectorConfig config = new KineticaSinkConnectorConfig(KineticaSinkConnectorConfig.config, props);
         
     }
+    
+    @Test
+    public void validateBulkInserterOnInsert() {
+        Map<String, String> props = TestConnector.configureConnection(sinkConfig);
+        props.put(SinkTask.TOPICS_CONFIG, "topic");
+        props.put(KineticaSinkConnectorConfig.PARAM_URL, "http://localhost:9191");
+        props.put(KineticaSinkConnectorConfig.PARAM_UPDATE_ON_EXISTING_PK, "false");
+        props.put(KineticaSinkConnectorConfig.PARAM_BATCH_SIZE, "10");
+        
+        KineticaSinkConnectorConfig config = new KineticaSinkConnectorConfig(KineticaSinkConnectorConfig.config, props);
+        assertFalse(config.getBoolean(KineticaSinkConnectorConfig.PARAM_UPDATE_ON_EXISTING_PK));
+        assertTrue(config.getInt(KineticaSinkConnectorConfig.PARAM_BATCH_SIZE).equals(10));
+    }
+
+    @Test
+    public void validateBulkInserterOnUpsert() {
+        Map<String, String> props = TestConnector.configureConnection(sinkConfig);
+        props.put(SinkTask.TOPICS_CONFIG, "topic");
+        props.put(KineticaSinkConnectorConfig.PARAM_URL, "http://localhost:9191");
+        props.put(KineticaSinkConnectorConfig.PARAM_UPDATE_ON_EXISTING_PK, "true");
+        props.put(KineticaSinkConnectorConfig.PARAM_BATCH_SIZE, "15");
+        
+        KineticaSinkConnectorConfig config = new KineticaSinkConnectorConfig(KineticaSinkConnectorConfig.config, props);
+        assertTrue(config.getBoolean(KineticaSinkConnectorConfig.PARAM_UPDATE_ON_EXISTING_PK));
+        assertTrue(config.getInt(KineticaSinkConnectorConfig.PARAM_BATCH_SIZE).equals(15));
+        
+    }
+
+    @Test
+    public void validateBulkInserterOnDefaultUpsert() {
+        Map<String, String> props = TestConnector.configureConnection(sinkConfig);
+        props.put(SinkTask.TOPICS_CONFIG, "topic");
+        props.put(KineticaSinkConnectorConfig.PARAM_URL, "http://localhost:9191");
+        
+        KineticaSinkConnectorConfig config = new KineticaSinkConnectorConfig(KineticaSinkConnectorConfig.config, props);
+        // assert default values set for BulkInserter are false on UPSERT and 10000 as batch size.
+        assertTrue(config.getBoolean(KineticaSinkConnectorConfig.PARAM_UPDATE_ON_EXISTING_PK));
+        assertTrue(config.getInt(KineticaSinkConnectorConfig.PARAM_BATCH_SIZE).equals(10000));
+        
+    }
+
+
 }
