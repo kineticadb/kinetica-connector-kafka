@@ -1,58 +1,86 @@
-GPUdb Kafka Connector Changelog
-===============================
+# GPUdb Kafka Connector Changelog
 
-Version 7.0.0.0 - 2019-01-31
-----------------------------
+## Version 7.0
+
+### Version 7.0.1.3 -- 2019-05-07
+
+#### Changed
+
+-   /alter/table endpoint to /alter/table/columns endpoint 
+for performance improvement on table altering operations.
+-   Updated the dependent Kinetica Java API version to 7.0.3.0
+    to get the latest high availability support related changes.
+
+### Version 7.0.1.2 -- 2019-05-01
+
+#### Added
+
+-   option to support UPDATE of existing records on
+    PK match or INSERT new data only (UPSERT).
+
+### Version 7.0.1.1 - 2019-04-01
+
+####   Fixed 
+
+-   datetime type conversion (on ingest format Long timestamp 
+to String datetime)
+
+
+## Version 7.0.0.0 - 2019-01-31
 
 -   Version release
 
 
-Version 6.2.1 - 2019-01-22
---------------------------
+### Version 6.2.1 -- 2019-01-22
 
--   Added ability to handle nullable columns
--   Added configuration classes for source and sink connectors
--   Added license references, updated project docs and readme file
--   Updated test suite and directory structure
--   Added ability to handle no-key JSON data
--   Added BulkInserter flush before shutdown
--   Separated Kafka datapump helpers into test-connect project
--   Added README.md with detailed connector configurations for all 
-possible Kafka message formats and data ingest scenarios
+#### Added
 
-Version 6.2.0 - 2018-04-11
---------------------------
+-   ability to handle nullable columns
+-   configuration classes for source and sink connectors
+-   license references, updated project docs and readme file
+-   ability to handle no-key JSON data
+-   BulkInserter flush before shutdown
+-   test-connect project for Kafka datapump helper classes 
+-   separate README.md file with detailed connector configurations 
+for different Kafka message formats and data ingest scenarios
 
--   Version release
--   Added option dest_table_override
--   Added support for schema-less sink connectors
--   Added enchancements to support Oracle Golden Gate
--   Removed schema part of table name
--   Added type conversion
--   Added option to create missing tables
--   Added support for multiple tables in a single put()
--   Fixed case for out of range dates
--   Added PK Upsert
--   Restructuring repository and adding 
 
-Version 6.1.0 - 2017-10-05
---------------------------
+### Version 6.2.0 -- 2018-04-11
 
--   Releasing version
+#### Added
 
-Version 6.0.0 - 2017-01-24
---------------------------
+-   option dest_table_override
+-   support for schema-less sink connectors
+-   enchancements to support Oracle Golden Gate
+-   type conversion
+-   option to create missing tables
+-   support for multiple tables in a single put()
+-   Bulkinserter configuration for PK Upsert
+
+#### Fixed
+-   case for out of range dates
+
+
+### Version 6.1.0 -- 2017-10-05
 
 -   Releasing version
 
-Version 5.2.0 - 2016-10-19
---------------------------
+### Version 6.0.0 -- 2017-01-24
 
--   Changed configuration to use ConfigDef
--   Failures are propagated to the framework
--   System test was added
+-   Releasing version
 
-Version 5.2.0 - 2016-07-08
---------------------------
+### Version 5.2.0 -- 2016-10-19
+
+#### Changed 
+
+-   configuration to use ConfigDef
+-   failure propagation to the framework
+
+#### Added
+
+-   System tests
+
+### Version 5.2.0 -- 2016-07-08
 
 -   Initial version
+

@@ -29,6 +29,7 @@ public class KineticaSinkConnectorConfig extends AbstractConfig {
     public static final String PARAM_SINGLE_TABLE_PER_TOPIC = "kinetica.single_table_per_topic";
     public static final String PARAM_RETRY_COUNT = "kinetica.retry_count";
     public static final String PARAM_ALLOW_SCHEMA_EVOLUTION = "kinetica.allow_schema_evolution";
+    public static final String PARAM_UPDATE_ON_EXISTING_PK = "kinetica.update_on_existing_pk";
     
     private static final String DEFAULT_TIMEOUT = "0";
     private static final String DEFAULT_BATCH_SIZE = "10000";
@@ -122,8 +123,14 @@ public class KineticaSinkConnectorConfig extends AbstractConfig {
         
                 .define(PARAM_ALLOW_SCHEMA_EVOLUTION, ConfigDef.Type.BOOLEAN, false, ConfigDef.Importance.LOW,
                         "Allow schema evolution for incoming Kafka messages. (optional, default false)", PARAM_GROUP, 14, ConfigDef.Width.SHORT,
-                        "Allow schema evolution");
+                        "Allow schema evolution")
+                
+		        .define(PARAM_UPDATE_ON_EXISTING_PK, ConfigDef.Type.BOOLEAN, true, ConfigDef.Importance.LOW,
+		                "Allow update on existing PK when inserting Kafka messages. (optional, default false)", PARAM_GROUP, 15, ConfigDef.Width.SHORT,
+		                "Allow update on existing PK");
+
     }
+    
     public static void main(String[] args) {
         System.out.println(config.toRst());
     }

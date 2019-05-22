@@ -17,7 +17,29 @@ import org.apache.kafka.connect.data.SchemaBuilder;
  *
  */
 public class SchemaRegistryUtils {
+
+    public static final Schema TICKER_SCHEMA = new Schema.Parser().parse(
+            "{\"type\":\"record\",\"name\":\"TickerTest\",\"namespace\":\"com.kinetica.kafka\",\"fields\":[{\"name\":\"symbol\",\"type\":\"string\"},{\"name\":\"securityType\",\"type\":[\"null\",\"string\"]},{\"name\":\"bidPrice\",\"type\":[\"null\",\"float\"]},{\"name\":\"bidSize\",\"type\":[\"null\",\"int\"]},{\"name\":\"askPrice\",\"type\":[\"null\",\"float\"]},{\"name\":\"askSize\",\"type\":[\"null\",\"int\"]},{\"name\":\"lastUpdated\",\"type\":\"long\"},{\"name\":\"lastSalePrice\",\"type\":[\"null\",\"float\"]},{\"name\":\"lastSaleSize\",\"type\":[\"null\",\"int\"]},{\"name\":\"lastSaleTime\",\"type\":\"long\"},{\"name\":\"volume\",\"type\":[\"null\",\"int\"]},{\"name\":\"marketPercent\",\"type\":[\"null\",\"float\"]}],\"connect.version\":1,\"connect.name\":\"TickerTest\"}");
+
+    public static final org.apache.kafka.connect.data.Schema KAFKA_TICKER_SCHEMA 
+    	= SchemaBuilder.struct()
+        .name("com.kinetica.kafka.TickerTest")
+        .field("symbol", org.apache.kafka.connect.data.Schema.STRING_SCHEMA)
+        .field("securityType", org.apache.kafka.connect.data.Schema.OPTIONAL_STRING_SCHEMA)
+        .field("bidPrice", org.apache.kafka.connect.data.Schema.OPTIONAL_FLOAT32_SCHEMA)
+        .field("bidSize", org.apache.kafka.connect.data.Schema.OPTIONAL_INT32_SCHEMA)
+        .field("askPrice", org.apache.kafka.connect.data.Schema.OPTIONAL_FLOAT32_SCHEMA)
+        .field("askSize", org.apache.kafka.connect.data.Schema.OPTIONAL_INT32_SCHEMA)
+        .field("lastUpdated", org.apache.kafka.connect.data.Schema.INT64_SCHEMA)
+        .field("lastSalePrice", org.apache.kafka.connect.data.Schema.OPTIONAL_FLOAT32_SCHEMA)
+        .field("lastSaleSize", org.apache.kafka.connect.data.Schema.OPTIONAL_INT32_SCHEMA)
+        .field("lastSaleTime", org.apache.kafka.connect.data.Schema.INT64_SCHEMA)
+        .field("volume", org.apache.kafka.connect.data.Schema.OPTIONAL_INT32_SCHEMA)
+        .field("marketPercent", org.apache.kafka.connect.data.Schema.OPTIONAL_FLOAT32_SCHEMA)
+        .build();
     
+    public static final String TICKER_PK = TICKER_SCHEMA.getFields().get(0).name();
+
     public static final Schema SCHEMA1 = new Schema.Parser().parse(
             "{\"type\":\"record\",\"name\":\"SchemaTest\",\"namespace\":\"com.kinetica.kafka\",\"fields\":[{\"name\":\"name\",\"type\":\"string\"},{\"name\":\"timestamp\",\"type\":\"long\"},{\"name\":\"test_int\",\"type\":[\"null\",\"int\"]},{\"name\":\"test_long\",\"type\":[\"null\",\"long\"]},{\"name\":\"test_float\",\"type\":[\"null\",\"float\"]},{\"name\":\"test_double\",\"type\":[\"null\",\"double\"]},{\"name\":\"test_bytes\",\"type\":[\"null\",\"bytes\"]},{\"name\":\"test_string\",\"type\":[\"null\",\"string\"]}],\"connect.version\":1,\"connect.name\":\"SchemaTest\"}");
 
@@ -174,4 +196,5 @@ public class SchemaRegistryUtils {
             }
         }
     }
+
 }

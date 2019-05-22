@@ -27,7 +27,7 @@ import com.gpudb.GPUdbException;
 import com.gpudb.GenericRecord;
 import com.gpudb.Type;
 import com.gpudb.Type.Column;
-import com.gpudb.protocol.AlterTableRequest;
+import com.gpudb.protocol.AlterTableColumnsRequest;
 
 //import kafka.common.KafkaException;
 
@@ -267,10 +267,10 @@ public class KineticaSinkTask extends SinkTask {
             // in case Kinetica table and GPUdb Type have to be updated, old BulkInserter should be flushed 
             this.biMap.get(tableName).flush();
             // match the schemas and get the result of merge
-            List<AlterTableRequest> alterTableRequests = this.schemaMgr.matchSchemas(tableName, genericSchema, gpudbSchema);
+            AlterTableColumnsRequest alterTableRequest = this.schemaMgr.matchSchemas(tableName, genericSchema, gpudbSchema);
             
-            if (alterTableRequests != null && !alterTableRequests.isEmpty()) {
-                gpudbSchema = this.schemaMgr.alterTable(tableName, alterTableRequests);
+            if (!alterTableRequest.getColumnAlterations().isEmpty()) {
+                gpudbSchema = this.schemaMgr.alterTable(tableName, alterTableRequest);
             }    
             
             if (this.typeMap.get(tableName).getColumnCount() != gpudbSchema.getColumnCount()) {

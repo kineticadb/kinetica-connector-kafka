@@ -436,6 +436,7 @@ that accepts the following parameters:
 | `kinetica.batch_size`| N | The number of records to insert at one time (default = 10000) |
 | `kinetica.timeout`| N | Timeout in milliseconds (default = 1000) |
 | `kinetica.create_table`| N | Automatically create missing table. (default = true) |
+| `kinetica.update_on_existing_pk`| N | Allow UPSERT of data into Kinetica table on existing PK. (default = true) |
 | `kinetica.allow_schema_evolution`| N | Allow schema evolution support for Kafka messages (requires Schema Registry running in Kafka stack). (default = false) |
 | `kinetica.single_table_per_topic`| N | When true, connector attempts to put all incoming messages into a single table. Otherwise creates a table for each individual message type.  (default = false) |
 | `kinetica.add_new_fields_as_columns`| N | When schema evolution is supported and Kafka message has a new field, connector attempts to insert a column for it into Kinetica table. (default = false) |

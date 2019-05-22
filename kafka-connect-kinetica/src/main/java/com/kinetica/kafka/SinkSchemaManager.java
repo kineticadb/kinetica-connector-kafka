@@ -19,6 +19,7 @@ import com.gpudb.GPUdbException;
 import com.gpudb.GenericRecord;
 import com.gpudb.Type;
 import com.gpudb.Type.Column;
+import com.gpudb.protocol.AlterTableColumnsRequest;
 import com.gpudb.protocol.AlterTableRequest;
 import com.gpudb.protocol.CreateTableRequest;
 import com.gpudb.protocol.InsertRecordsRequest;
@@ -39,6 +40,7 @@ public class SinkSchemaManager {
     protected final boolean alterColumnsToNullable;
     protected final boolean singleTablePerTopic;
     protected final boolean allowSchemaEvolution;
+    protected final boolean updateOnExistingPK;
     private final int retryCount;
     
     private final HashMap<String, List<Integer>> knownSchemas = new HashMap<>();
@@ -78,6 +80,8 @@ public class SinkSchemaManager {
                 props.get(KineticaSinkConnectorConfig.PARAM_RETRY_COUNT).trim() );
         this.allowSchemaEvolution = Boolean.parseBoolean(
                 props.get(KineticaSinkConnectorConfig.PARAM_ALLOW_SCHEMA_EVOLUTION) );
+        this.updateOnExistingPK = Boolean.parseBoolean(
+                props.get(KineticaSinkConnectorConfig.PARAM_UPDATE_ON_EXISTING_PK) );
 
         String url = props.get(KineticaSinkConnectorConfig.PARAM_URL);
         try {
@@ -102,7 +106,8 @@ public class SinkSchemaManager {
      */
     public BulkInserter<GenericRecord> getBulkInserter(String tableName, Type gpudbSchema) throws GPUdbException {
         HashMap<String,String> options = new HashMap<>();
-        options.put(InsertRecordsRequest.Options.UPDATE_ON_EXISTING_PK, InsertRecordsRequest.Options.TRUE);
+        options.put(InsertRecordsRequest.Options.UPDATE_ON_EXISTING_PK, 
+        		(this.updateOnExistingPK ? InsertRecordsRequest.Options.TRUE : InsertRecordsRequest.Options.FALSE));
         BulkInserter<GenericRecord> result = new BulkInserter<>(this.gpudb, tableName, gpudbSchema, this.batchSize, options);
         result.setRetryCount(this.retryCount);
         return result;
@@ -405,9 +410,10 @@ public class SinkSchemaManager {
      * @return List of AlterTableRequests to update underlying Kinetica table
      * @throws Exception
      */
-    protected List<AlterTableRequest> matchSchemas(String tableName, Object genericSchema, Type cachedType) throws Exception {
+    protected AlterTableColumnsRequest matchSchemas(String tableName, Object genericSchema, Type cachedType) throws Exception {
         LOG.debug("matchSchemas started for " + tableName);
-        List<AlterTableRequest> result = new ArrayList<AlterTableRequest>();
+        AlterTableColumnsRequest result = new AlterTableColumnsRequest(tableName, null, null);
+        result.getOptions().put(AlterTableRequest.Options.COLUMN_PROPERTIES,  com.gpudb.ColumnProperty.NULLABLE);
         Type incoming;
         if (genericSchema instanceof Schema) {
             incoming = KineticaTypeConverter.convertTypeFromSchema((Schema)genericSchema); 
@@ -445,18 +451,19 @@ public class SinkSchemaManager {
                 if (this.addNewColumns) {
                     LOG.info("Altering table " + tableName + " to add column " + incomingField.getName() 
                             + " of type " + incomingField.getType().getSimpleName());
-                    AlterTableRequest request = new AlterTableRequest();
-                    request.setTableName(tableName);
-                    request.setAction(AlterTableRequest.Action.ADD_COLUMN);
-                    request.setValue(incomingField.getName());
                     
-                    Map<String, String> options = new HashMap<String, String>();
-                    options.put(AlterTableRequest.Options.COLUMN_TYPE, KineticaTypeConverter.getKineticaColumnType(incomingField));
-                    options.put(AlterTableRequest.Options.COLUMN_PROPERTIES, "nullable");
-                    
-                    request.setOptions(options);
-                    result.add(request);
+                    Map<String, String> alterations = new HashMap<String, String>();
+                    alterations.put(AlterTableRequest.Options.ACTION, AlterTableRequest.Action.ADD_COLUMN);
+                    alterations.put(AlterTableRequest.Options.COLUMN_NAME, incomingField.getName());
+                    alterations.put(AlterTableRequest.Options.COLUMN_TYPE, KineticaTypeConverter.getKineticaColumnType(incomingField));
+                    alterations.put(AlterTableRequest.Options.COLUMN_PROPERTIES, com.gpudb.ColumnProperty.NULLABLE);
+                    String val = getFieldDefaultValue(incomingField.getName(), genericSchema);
+                    if (val != null) {
+                    	alterations.put(AlterTableRequest.Options.COLUMN_DEFAULT_VALUE, val);
+                    }
 
+                    result.getColumnAlterations().add(alterations);
+                    
                 } else {
                     // warn that this record field is not recognized and its value is ignored because no changes to Kinetica table allowed 
                     LOG.warn("When ingesting data Column " + incomingField.getName() + " of Type " + incomingField.getType().getTypeName() 
@@ -477,23 +484,20 @@ public class SinkSchemaManager {
                 if (this.alterColumnsToNullable){
                     LOG.info("Altering table " + tableName + " column " + existingField.getName() + " to make it nullable");
                     mapper.getMissing().put(existingField.getName(), existingField);
-                    AlterTableRequest request = new AlterTableRequest();
-                    request.setTableName(tableName);
-                    request.setAction(AlterTableRequest.Action.CHANGE_COLUMN);
-                    request.setValue(existingField.getName());
-                    StringBuilder sb = new StringBuilder("nullable");
+                    
+                    StringBuilder sb = new StringBuilder(com.gpudb.ColumnProperty.NULLABLE);
                     for (String property : existingField.getProperties()) {
                         if (property != null && !property.isEmpty())
                             sb.append("," + property);
                     }
                     
-                    Map<String, String> options = new HashMap<String, String>();
-                    options.put(AlterTableRequest.Options.COLUMN_TYPE, KineticaTypeConverter.getKineticaColumnType(existingField));
-                    options.put(AlterTableRequest.Options.COLUMN_PROPERTIES, sb.toString());
-                    options.put(AlterTableRequest.Options.VALIDATE_CHANGE_COLUMN, "true");
+                    Map<String, String> alterations = new HashMap<String, String>();
+                    alterations.put(AlterTableRequest.Options.ACTION, AlterTableRequest.Action.CHANGE_COLUMN);
+                    alterations.put(AlterTableRequest.Options.COLUMN_NAME, existingField.getName());
+                    alterations.put(AlterTableRequest.Options.COLUMN_TYPE, KineticaTypeConverter.getKineticaColumnType(existingField));
+                    alterations.put(AlterTableRequest.Options.COLUMN_PROPERTIES, sb.toString());
 
-                    request.setOptions(options);
-                    result.add(request);
+                    result.getColumnAlterations().add(alterations);
                     
                 } else {
                     LOG.warn("During data ingest the required Column " + existingField.getName() + " of Type " + existingField.getType().getTypeName() 
@@ -519,14 +523,12 @@ public class SinkSchemaManager {
      * @throws GPUdbException
      */
     
-    public Type alterTable(String tableName, List<AlterTableRequest> alterTableRequests) throws GPUdbException {                
+    public Type alterTable(String tableName, AlterTableColumnsRequest request) throws GPUdbException {
         try {
-            for (AlterTableRequest request : alterTableRequests) {
-                this.gpudb.alterTable(request);
-            }
+            this.gpudb.alterTableColumns(request);
             
         } catch (GPUdbException e) {
-            LOG.error(e.getMessage() + e.getStackTrace());
+            LOG.error("AlterTableColumns exception: " + e.getMessage() + e.getStackTrace());
             return Type.fromTable(this.gpudb, tableName);
         }
         return Type.fromTable(this.gpudb, tableName);
@@ -638,4 +640,20 @@ public class SinkSchemaManager {
         return Type.fromTable(this.gpudb, tableName);
     }
     
+    protected String getFieldDefaultValue(String name, Object genericSchema) {
+    	try {
+            if (genericSchema instanceof Schema) {
+            	org.apache.kafka.connect.data.Field field = ((Schema)genericSchema).field(name);
+                return (String)field.schema().defaultValue();
+            } 
+            if (genericSchema instanceof org.apache.avro.Schema) {
+                org.apache.avro.Schema.Field field = ((org.apache.avro.Schema) genericSchema).getField(name);
+                return (String)field.defaultVal();
+            }
+    		return null;
+    	} catch (Exception e) {
+    		LOG.error(e.getMessage() + e.getStackTrace());
+    		return null;
+    	}
+    }
 }

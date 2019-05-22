@@ -4,7 +4,7 @@
 
     <groupId>com.kinetica</groupId>
     <artifactId>kafka-connect-kinetica</artifactId>
-    <version>7.0.0.0</version>
+    <version>7.0.1.3</version>
     <packaging>jar</packaging>
 
     <name>Kafka Connector for Kinetica DB</name>
@@ -16,7 +16,7 @@
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven-jar-plugin.version>3.0.2</maven-jar-plugin.version>        
-        <gpudb-api.version>7.0.0.0</gpudb-api.version>
+        <gpudb-api.version>[7.0.3.0,7.1)</gpudb-api.version>
         <java.version>1.7</java.version>
         <zeromq.version>0.3.5</zeromq.version>
         <kafka.version>2.0.0</kafka.version>

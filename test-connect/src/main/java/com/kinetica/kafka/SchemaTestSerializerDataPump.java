@@ -153,7 +153,25 @@ public class SchemaTestSerializerDataPump {
         
         return records;
     }
-   
+
+    /**
+     * Produces a given number of Kafka messages with embedded schema for the given schema type,
+     * mocking stock ticker values  
+     * @param topic          topic name
+     * @param count          number of records to generate
+     * @return
+     */
+    public static List<SinkRecord> mockTickerValues(String topic, int count) {
+        List<SinkRecord> records = new ArrayList<SinkRecord>();
+        // create serialized object with embedded versioned schema
+        for (int i=0; i<count; i++) {
+            Struct value = KafkaSchemaHelpers.populateTicker(SchemaRegistryUtils.KAFKA_TICKER_SCHEMA, i);
+            SinkRecord record = new SinkRecord(topic, i, SchemaRegistryUtils.KAFKA_TICKER_SCHEMA.schema(), i, 
+            		SchemaRegistryUtils.KAFKA_TICKER_SCHEMA, value, new Date().getTime());
+            records.add(record);
+        }
+        return records;
+    }
     /**
      * Primitive arg parser
      * @param args

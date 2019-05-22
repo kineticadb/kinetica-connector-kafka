@@ -53,7 +53,7 @@ public class AvroSerializerDataPumpSinkTest {
     @Test 
     public void testAvroSchemaEvolutionFullCompatibility() throws Exception {
         // Connector is configured to have no additional table prefix
-        Map<String, String> config = ConnectorConfigHelper.getParameterizedConfig(TOPIC, COLLECTION, "", "", true, true, true, true, true);
+        Map<String, String> config = ConnectorConfigHelper.getParameterizedConfig(TOPIC, COLLECTION, "", "", true, true, true, true, true, true);
 
         // Configure and start connector and sinktask
         KineticaSinkConnector connector = ConnectorConfigHelper.startConnector(config);
@@ -67,7 +67,7 @@ public class AvroSerializerDataPumpSinkTest {
         assertTrue(tableExists);
 
         // expect table size to match number of Kafka messages generated/ingested
-        ShowTableResponse response = gpudb.showTable(TOPIC, tableSizeProps);        
+        ShowTableResponse response = gpudb.showTable(TOPIC, tableSizeProps);
         int size = response.getFullSizes().get(0).intValue();
         assertEquals(size, batch_size*4);
         
@@ -83,7 +83,7 @@ public class AvroSerializerDataPumpSinkTest {
     @Test
     public void testAvroSchemaEvolutionWithTablePrefix() throws Exception {
         // Connector is configured to have additional table prefix
-        Map<String, String> config = ConnectorConfigHelper.getParameterizedConfig(TOPIC, COLLECTION, PREFIX, "", true, true, true, true, true);
+        Map<String, String> config = ConnectorConfigHelper.getParameterizedConfig(TOPIC, COLLECTION, PREFIX, "", true, true, true, true, true, true);
         // Cleanup, configure and start connector and sinktask
         
         KineticaSinkConnector connector = ConnectorConfigHelper.startConnector(config);
@@ -108,7 +108,7 @@ public class AvroSerializerDataPumpSinkTest {
     @Test 
     public void testAvroSchemaEvolutionWithTableOverride() throws Exception {
         // Connector is configured to have tablename override
-        Map<String, String> config = ConnectorConfigHelper.getParameterizedConfig(TOPIC, COLLECTION, "", TABLE, true, true, true, true, true);
+        Map<String, String> config = ConnectorConfigHelper.getParameterizedConfig(TOPIC, COLLECTION, "", TABLE, true, true, true, true, true, true);
         // Cleanup, configure and start connector and sinktask
         
         KineticaSinkConnector connector = ConnectorConfigHelper.startConnector(config);
@@ -134,7 +134,7 @@ public class AvroSerializerDataPumpSinkTest {
     public void testAvroSchemaEvolutionWithNoTableEditing() throws Exception {
         // Connector is configured to override table name
         String tableOverride = "noEdits";
-        Map<String, String> config = ConnectorConfigHelper.getParameterizedConfig(TOPIC, COLLECTION, "", tableOverride, true, true, true, false, false);
+        Map<String, String> config = ConnectorConfigHelper.getParameterizedConfig(TOPIC, COLLECTION, "", tableOverride, true, true, true, false, false, true);
         // Cleanup, configure and start connector and sinktask
         
         KineticaSinkConnector connector = ConnectorConfigHelper.startConnector(config);
@@ -167,7 +167,7 @@ public class AvroSerializerDataPumpSinkTest {
     public void testAvroSchemaEvolutionWithForwardCompatibility() throws Exception {
         // Connector is configured to override table name
         String tableOverride = "ForwardCompatibility";
-        Map<String, String> config = ConnectorConfigHelper.getParameterizedConfig(TOPIC, COLLECTION, "", tableOverride, true, true, true, true, false);
+        Map<String, String> config = ConnectorConfigHelper.getParameterizedConfig(TOPIC, COLLECTION, "", tableOverride, true, true, true, true, false, true);
         // Cleanup, configure and start connector and sinktask
         
         KineticaSinkConnector connector = ConnectorConfigHelper.startConnector(config);
@@ -200,7 +200,7 @@ public class AvroSerializerDataPumpSinkTest {
     public void testAvroSchemaEvolutionWithBackwardCompatibility() throws Exception {
         // Connector is configured to override table name
         String tableOverride = "BackwardCompatibility";
-        Map<String, String> config = ConnectorConfigHelper.getParameterizedConfig(TOPIC, COLLECTION, "", tableOverride, true, true, true, false, true);
+        Map<String, String> config = ConnectorConfigHelper.getParameterizedConfig(TOPIC, COLLECTION, "", tableOverride, true, true, true, false, true, true);
         // Cleanup, configure and start connector and sinktask
         
         KineticaSinkConnector connector = ConnectorConfigHelper.startConnector(config);
