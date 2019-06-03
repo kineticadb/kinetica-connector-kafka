@@ -565,9 +565,9 @@ production deployment.
 
 [DIST_MODE]: <https://docs.confluent.io/current/connect/managing.html#configuring-connectors>
 
-Create configuration files `connect-standalone-sink.properties` and `connect-standalone-source.properties`
-based on example below. Make sure rest.port for sink and source files is set to different values.
-This example may require modifications (editing IP addresses, ports, local paths) to fit your environment.
+In the `{KAFKA_HOME}/config` folder create configuration files `connect-standalone-sink.properties` 
+and `connect-standalone-source.properties` based on example below. 
+Make sure rest.port for sink and source files is set to different values.
 
 ```
 # This should point to your Kafka broker
@@ -597,7 +597,7 @@ internal.value.converter = org.apache.kafka.connect.json.JsonConverter
 internal.value.converter.schemas.enable = false
 ```
 
-Create a configuration file `source.properties` for the source connector:
+In the same folder create a configuration file `source.properties` for the source connector:
 
 ```
 # Connector API required config parameters
@@ -628,7 +628,7 @@ kinetica.timeout = 1000
 kinetica.batch_size = 100
 ```
 
-The rest of this system test will require three terminal windows.
+The rest of this system test will require four terminal windows.
 
 * In terminal 1, start *zookeeper* and *kafka*:
 
@@ -646,17 +646,22 @@ $ java -cp kafka-2.0.0-connector-kinetica-6.2.1-SNAPSHOT-jar-with-dependencies.j
     com.kinetica.kafka.tests.TestDataPump -c <path/to/sink.properties>
 ```
 
-* In terminal 3, start kafka source and sink connectors:
+* In terminal 3, start kafka sink connector:
 
 ```sh
-$ connect-standalone connect-standalone.properties \
-    source.properties sink.properties
+$ bin/connect-standalone.sh config/connect-standalone-sink.properties config/sink.properties
+```
+
+* In terminal 4, start kafka source connector:
+
+```sh
+$ bin/connect-standalone.sh config/connect-standalone-source.properties config/source.properties
 ```
 
 * Verify that data is copied to tables `out_KafkaConnectorTest` and `out_KafkaConnectorTest2`.
 
 
-To test schemaless JSON format, in `connect-standalone.properties` file set 
+To test schemaless JSON format, in `connect-standalone-*.properties` config files set 
 
 ```
 key.converter.schemas.enable=false
