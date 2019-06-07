@@ -568,6 +568,7 @@ production deployment.
 In the `{KAFKA_HOME}/config` folder create configuration files `connect-standalone-sink.properties` 
 and `connect-standalone-source.properties` based on example below. 
 Make sure rest.port for sink and source files is set to different values.
+This example may require modifications (editing IP addresses, ports, local paths) to fit your environment.
 
 ```
 # This should point to your Kafka broker
