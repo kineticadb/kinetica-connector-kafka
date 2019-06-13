@@ -3,6 +3,7 @@ package com.kinetica.kafka;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -26,6 +27,7 @@ public class JsonDataPumpSinkTest {
     private final static String COLLECTION = "TEST";
     private final static String PREFIX = "out";
     private final static String AVRO_PREFIX = "avro";
+    private final static String NULL_SUFFIX = "_with_nulls";
         
     private final static int TASK_NUM = 1;
     
@@ -41,7 +43,15 @@ public class JsonDataPumpSinkTest {
     }
     
     @After
-    public void cleanup() {
+    public void cleanup() throws Exception{
+    	List<String> tableNames = new ArrayList<String>();
+    	for (String fruit : KafkaSchemaHelpers.FRUITS) {
+    		tableNames.add(fruit);
+    		tableNames.add(AVRO_PREFIX + fruit);
+    		tableNames.add(PREFIX + fruit);
+    		tableNames.add(fruit + NULL_SUFFIX);
+    	}
+    	ConnectorConfigHelper.tableCleanUp(this.gpudb, tableNames.toArray(new String[tableNames.size()]));
         this.gpudb = null;
     }
         
@@ -58,7 +68,7 @@ public class JsonDataPumpSinkTest {
         KineticaSinkTask task = startSinkTask(connector); 
         
         // run data generation
-        runSinkTask(task, TOPIC, false);
+        runSinkTask(task, TOPIC, false, false);
         Thread.sleep(1000);
         
         // expect Kinetica tables to exist and be populated
@@ -74,6 +84,39 @@ public class JsonDataPumpSinkTest {
         connector.stop();
 
     }
+    
+    
+	// OGG Json message means that Kafka record has Table name for a key and Json map of k/v pairs for payload 
+	// No Kinetica table renaming or prefixing
+	@Test
+	public void testSchemalessOGGJsonWithNulls() throws Exception {
+		String topic = TOPIC + "WithNulls";
+	    // Connector is configured to have no additional table prefix and no tablename override
+	    Map<String, String> config = ConnectorConfigHelper.getParameterizedConfig(topic, COLLECTION, "", "", true, false);
+	    
+	    // Cleanup, configure and start connector and sinktask
+	    ConnectorConfigHelper.tableCleanUp(this.gpudb, KafkaSchemaHelpers.FRUITS);
+	    KineticaSinkConnector connector = ConnectorConfigHelper.startConnector(config);
+	    KineticaSinkTask task = startSinkTask(connector); 
+	    
+	    // run data generation
+	    runSinkTask(task, topic, false, true);
+	    Thread.sleep(1000);
+	    
+	    // expect Kinetica tables to exist and be populated
+	    for (String fruit : KafkaSchemaHelpers.FRUITS) {
+	    	String tableName = fruit + NULL_SUFFIX;
+	        boolean tableExists = gpudb.hasTable(tableName, null).getTableExists(); 
+	        assertTrue(tableExists);
+	        
+	        // expect table size to match number of Kafka messages generated/ingested
+	        int size = gpudb.showTable(tableName, tableSizeProps).getFullSizes().get(0).intValue();        
+	        assertEquals(size, JsonDataPump.batchSize*JsonDataPump.count);
+	    }
+	    Thread.sleep(2000);
+	    connector.stop();
+	
+	}
 
     // OGG Json message means that Kafka record has Table name for a key and Json map of k/v pairs for payload 
     // Kinetica table is prefixed
@@ -93,7 +136,7 @@ public class JsonDataPumpSinkTest {
         KineticaSinkTask task = startSinkTask(connector); 
 
         // run data generation
-        runSinkTask(task, TOPIC, false);
+        runSinkTask(task, TOPIC, false, false);
         Thread.sleep(2000);
         
         // expect Kinetica tables to exist and be populated
@@ -129,7 +172,7 @@ public class JsonDataPumpSinkTest {
         KineticaSinkTask task = startSinkTask(connector); 
 
         // run data generation
-        runSinkTask(task, AVRO_TOPIC, true);
+        runSinkTask(task, AVRO_TOPIC, true, false);
         Thread.sleep(1000);
         
         // expect Kinetica tables to exist and be populated
@@ -172,11 +215,13 @@ public class JsonDataPumpSinkTest {
      * @param messageKey   message key to be used
      * @throws Exception
      */
-    private void runSinkTask(KineticaSinkTask task, String topic, boolean avroEncoded) throws Exception {
+    private void runSinkTask(KineticaSinkTask task, String topic, boolean avroEncoded, boolean withNulls) throws Exception {
         
         List<SinkRecord> sinkRecords;
         
-        if (avroEncoded) {
+        if (withNulls) {
+        	sinkRecords =  JsonDataPump.mockSinkRecordJSONMessagesWithNulls(topic);
+        } else if (avroEncoded) {
             sinkRecords =  JsonDataPump.mockSinkRecordAvroMessages(topic);
         } else {
             sinkRecords =  JsonDataPump.mockSinkRecordJSONMessages(topic);

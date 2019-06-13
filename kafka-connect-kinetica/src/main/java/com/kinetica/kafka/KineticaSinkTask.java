@@ -334,11 +334,13 @@ public class KineticaSinkTask extends SinkTask {
                 if (mapper.getMapped().keySet().contains(columnName)) {
                     // columns required by schema, should be present in record
                     
-                    Object outValue = convertValue(inValue, column);
-                    if(outValue == null) {
+                    // when incoming value is null
+                    if(inValue == null && !column.isNullable()) {
                         // if the column is required (not nullable), record can't be saved to DB and should be failed
-                        throw new ConnectException("Unsupported null value in field " + column.getName());
+                        throw new ConnectException(String.format("Unsupported null value in field %s: got value %s expected type %s", column.getName(), inValue, column.getType()));
                     }
+
+                    Object outValue = convertValue(inValue, column);
                     outRecord.put(column.getName(), outValue);
                 } 
                 if (mapper.getMissing().keySet().contains(columnName)) {
@@ -410,11 +412,6 @@ public class KineticaSinkTask extends SinkTask {
      */
     private Object convertValue(Object inValue, Column column) throws Exception {        
         if(inValue == null) {
-            // when incoming value is null
-            if(!column.isNullable()) {
-                // if the column is required (not nullable), record can't be saved to DB and should be failed
-                throw new ConnectException(String.format("Unsupported null value in field %s: got value %s expected type %s", column.getName(), inValue, column.getType()));
-            }
             //if the column is nullable, it's a valid null value to pass to DB
             return null;
         }
