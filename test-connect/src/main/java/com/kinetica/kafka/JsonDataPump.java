@@ -43,6 +43,7 @@ public class JsonDataPump {
     private static String topic = "fruits";
     protected static int batchSize = 10;
     protected static int count = 10;
+    private final static String NULL_SUFFIX = "_with_nulls";
     
     static Schema appleSchema = new Schema.Parser().parse(Apple.getSchema());
     static Schema bananaSchema = new Schema.Parser().parse(Banana.getSchema());
@@ -210,6 +211,27 @@ public class JsonDataPump {
         return sinkRecords;
     }    
 
+    public static List<SinkRecord> mockSinkRecordJSONMessagesWithNulls(String topic) {
+        List<SinkRecord> sinkRecords = new ArrayList<SinkRecord>();
+
+        Map<String, Object> data;
+        float percent = 0.15f;
+        
+        for (int i=0; i<JsonDataPump.count; i++) {
+            for (int j=0; j<JsonDataPump.batchSize; j++){
+                for (String key : KafkaSchemaHelpers.FRUITS) {
+                    if(i != 0 && j != 0) {
+                    	data = KafkaSchemaHelpers.populateConsumerRecord(key, percent);
+                    } else {
+                    	data = KafkaSchemaHelpers.populateConsumerRecord(key);
+                    }
+                    sinkRecords.add(new SinkRecord(topic, 0, null, key + NULL_SUFFIX, null, data, new Date().getTime()));
+                }
+            }
+        }
+        return sinkRecords;
+    }   
+    
     public static List<SinkRecord> mockSinkRecordAvroMessages (String topic) {
         List<SinkRecord> sinkRecords = new ArrayList<SinkRecord>();
         SinkRecord record;
