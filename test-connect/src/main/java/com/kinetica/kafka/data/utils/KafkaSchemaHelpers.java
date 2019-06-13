@@ -127,4 +127,14 @@ public class KafkaSchemaHelpers {
         return record;
     }
 
+    public static Map<String, Object> populateConsumerRecord(String className, float percent) {
+        org.apache.kafka.connect.data.Schema schema = getKafkaSchema(className);
+        Map<String, Object> record = new HashMap<String, Object>();
+        for (org.apache.kafka.connect.data.Field field : schema.fields()) {
+        	// add null values to 'percent' number of nullable fields    
+        	record.put(field.name(), (!"id".equalsIgnoreCase(field.name()) && (random.nextFloat()<percent) ) ? null : randomValueByType(field.schema()));
+        }
+        return record;
+    }
+
 }
