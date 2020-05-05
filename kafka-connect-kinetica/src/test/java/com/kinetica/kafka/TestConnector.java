@@ -114,12 +114,12 @@ public class TestConnector {
      * @throws Exception
      */
     public void createSourceTable() throws Exception {
-        final String COLLECTION_NAME = "TEST";
 
         try {
             String gpudbURL = this.sourceConfig.get(KineticaSourceConnectorConfig.PARAM_URL);
             String tableName = sourceConfig.get(KineticaSourceConnectorConfig.PARAM_TABLE_NAMES);
-
+            String COLLECTION_NAME = sinkConfig.get(KineticaSinkConnectorConfig.PARAM_COLLECTION);
+            
             GPUdb gpudb = new GPUdb(gpudbURL, new GPUdb.Options()
                     .setUsername(sourceConfig.get(KineticaSourceConnectorConfig.PARAM_USERNAME))
                     .setPassword(sourceConfig.get(KineticaSourceConnectorConfig.PARAM_PASSWORD))

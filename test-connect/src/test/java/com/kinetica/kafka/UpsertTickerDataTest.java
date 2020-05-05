@@ -91,14 +91,18 @@ public class UpsertTickerDataTest {
         String prefix = "UpsertOff";
         Map<String, String> config = 
         		ConnectorConfigHelper.getParameterizedConfig(TICKER, COLLECTION, prefix, "", true, false, true, false, false, false);
-        String tableName = prefix+TICKER;
+        
+        SinkSchemaManager manager = new SinkSchemaManager(config);
+        String tableName = manager.getDestTable(TICKER, (SchemaRegistryUtils.KAFKA_TICKER_SCHEMA).toString());
         gpudb.clearTable(tableName, "", 
         		GPUdbBase.options(ClearTableRequest.Options.NO_ERROR_IF_NOT_EXISTS, ClearTableRequest.Options.TRUE));
-        		
+        
+        KineticaFieldMapper mapper = new KineticaFieldMapper(tableName, null);
+        KineticaTypeConverter.convertTypeFromSchema(SchemaRegistryUtils.KAFKA_TICKER_SCHEMA, mapper);
+        
         // Create Kinetica table with first field made PK
-        List<Column> temp = KineticaTypeConverter.convertTypeFromSchema(SchemaRegistryUtils.KAFKA_TICKER_SCHEMA).getColumns();
         List<Column> columns = new ArrayList<Column>();
-        for (Column col : temp) {
+        for (Column col : mapper.getMapped().values()) {
         	List<String> options = new ArrayList<String>(col.getProperties());
         	if (col.getName().equalsIgnoreCase(SchemaRegistryUtils.TICKER_PK)) {
         		options.add(com.gpudb.ColumnProperty.PRIMARY_KEY);
@@ -160,14 +164,18 @@ public class UpsertTickerDataTest {
         // Connector is configured to have an additional table prefix
         String prefix = "UpsertOn";
         Map<String, String> config = ConnectorConfigHelper.getParameterizedConfig(TICKER, COLLECTION, prefix, "", true, false, true, false, false, true);
-        String tableName = prefix+TICKER;
+
+        SinkSchemaManager manager = new SinkSchemaManager(config);
+        String tableName = manager.getDestTable(TICKER, (SchemaRegistryUtils.KAFKA_TICKER_SCHEMA).toString());
         gpudb.clearTable(tableName, "", 
         		GPUdbBase.options(ClearTableRequest.Options.NO_ERROR_IF_NOT_EXISTS, ClearTableRequest.Options.TRUE));
-        		
-        // Create Kinetica table with first field made PK
-        List<Column> temp = KineticaTypeConverter.convertTypeFromSchema(SchemaRegistryUtils.KAFKA_TICKER_SCHEMA).getColumns();
+        
+        KineticaFieldMapper mapper = new KineticaFieldMapper(tableName, null);
+        KineticaTypeConverter.convertTypeFromSchema(SchemaRegistryUtils.KAFKA_TICKER_SCHEMA, mapper);
+        
+        // Create Kinetica table with first field made PK        
         List<Column> columns = new ArrayList<Column>();
-        for (Column col : temp) {
+        for (Column col : mapper.getMapped().values()) {
         	List<String> options = new ArrayList<String>(col.getProperties());
         	if (col.getName().equalsIgnoreCase(SchemaRegistryUtils.TICKER_PK)) {
         		options.add(com.gpudb.ColumnProperty.PRIMARY_KEY);
