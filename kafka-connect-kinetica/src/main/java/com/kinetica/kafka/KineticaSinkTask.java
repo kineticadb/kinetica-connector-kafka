@@ -2,6 +2,7 @@ package com.kinetica.kafka;
 
 import java.nio.ByteBuffer;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
@@ -143,8 +144,6 @@ public class KineticaSinkTask extends SinkTask {
         // Loop through all sink records in the collection and create records
         // out of them.
         for (SinkRecord sinkRecord : sinkRecords) {
-            LOG.debug("sinkRecord " + sinkRecord + " \nkeySchema = [" + sinkRecord.keySchema() + "] \nvalueSchema = [" + sinkRecord.valueSchema() + 
-                    "] \nkey = [" + sinkRecord.key() + "] \nvalue =[" + sinkRecord.value() + "]");
             Type gpudbSchema;
             BulkInserter<GenericRecord> builkInserter;
             String tableName = null;
@@ -161,9 +160,9 @@ public class KineticaSinkTask extends SinkTask {
                 // lookup a KineticaFieldMapper in the schema manager by tablename/version
                 // KineticaFieldMapper maps record values to columns in the Kinetica table
                 mapper = this.schemaMgr.getFieldMapper(tableName, schemaVersion);
-                LOG.debug("Mapper found: [" + tableName + " " + schemaVersion + "] " + mapper);
-                LOG.debug("Mapped fields:" + Arrays.asList(mapper.getMapped().keySet().toArray(new String[mapper.getMapped().keySet().size()])));
-                LOG.debug("Missing fields:" + Arrays.asList(mapper.getMissing().keySet().toArray(new String[mapper.getMissing().keySet().size()])));
+                LOG.info("Mapper found: [table = " + tableName + " version = " + schemaVersion + "] ");
+                LOG.info("Mapped fields: " + Arrays.asList(mapper.getMapped().keySet().toArray(new String[mapper.getMapped().keySet().size()])));
+                LOG.info("Missing fields: " + Arrays.asList(mapper.getMissing().keySet().toArray(new String[mapper.getMissing().keySet().size()])));
             }
             catch (Exception ex) {
                 KafkaException kex = new KafkaException(String.format("Unable to obtain schema: %s",
@@ -176,7 +175,12 @@ public class KineticaSinkTask extends SinkTask {
             GenericRecord gpudbRecord;
 
             try {
-                  gpudbRecord = convertRecord(sinkRecord.value(), gpudbSchema, mapper);
+                LOG.debug(">>>>>>>>> Incoming: " + sinkRecord.value());
+                LOG.debug(">>>>>>>>>   Mapper: " + mapper.getTableName() + " " + mapper.getVersion());
+                LOG.debug(">>>>>>>>>   Mapped: " + mapper.getMapped().keySet());
+                LOG.debug(">>>>>>>>>  Missing: " + mapper.getMissing().keySet());
+                LOG.debug(">>>>>>>>>   Lookup: " + mapper.getLookup().keySet());
+                gpudbRecord = convertRecord(sinkRecord.value(), gpudbSchema, mapper);
                 builkInserter.insert(gpudbRecord);
             }
             catch (InsertException e) {
@@ -325,32 +329,46 @@ public class KineticaSinkTask extends SinkTask {
     private GenericRecord convertRecord(Object inRecord, Type gpudbSchema, KineticaFieldMapper mapper) throws Exception {
         GenericRecord outRecord = new GenericRecord(gpudbSchema);
         Class<?> inRecordType = inRecord.getClass();
-
-        // Loop through all columns.
-        for (Column column : gpudbSchema.getColumns()) {
+        
+        // Loop through all Kinetica columns.
+        for (Column column  : gpudbSchema.getColumns()) {
             try {
                 String columnName = column.getName();
-                Object inValue = getColumnValue(columnName, inRecord, inRecordType);
-                if (mapper.getMapped().keySet().contains(columnName)) {
-                    // columns required by schema, should be present in record
-                    
-                    // when incoming value is null
-                    if(inValue == null && !column.isNullable()) {
-                        // if the column is required (not nullable), record can't be saved to DB and should be failed
-                        throw new ConnectException(String.format("Unsupported null value in field %s: got value %s expected type %s", column.getName(), inValue, column.getType()));
-                    }
+                // Dealing with column names
+                if (mapper.getLookup().containsKey(columnName)) {
+                    String knownField = mapper.getLookup().get(columnName);
 
-                    Object outValue = convertValue(inValue, column);
-                    outRecord.put(column.getName(), outValue);
-                } 
-                if (mapper.getMissing().keySet().contains(columnName)) {
-                    // nullable columns missing from schema
+                    if (mapper.getMapped().containsKey(knownField)) {
+                        // columns required by schema, should be present in record
+                        // Dealing with values
+                        Object inValue = getColumnValue(knownField, inRecord, inRecordType, mapper);
+                        
+                        // when incoming value is null
+                        if(inValue == null && !column.isNullable()) {
+                            // if the column is required (not nullable), record can't be saved to DB and should be failed
+                            throw new ConnectException(String.format("Unsupported null value in field %s: got value %s expected type %s", column.getName(), inValue, column.getType()));
+                        }
+
+                        Object outValue = convertValue(inValue, column);
+                        outRecord.put(column.getName(), outValue);
+                    }
+                    if (mapper.getMissing().containsKey(knownField)) {
+                        LOG.debug("Expected field is missing " + knownField);
+                        // nullable columns missing from schema
+                        outRecord.put(column.getName(), null);                        
+                    }
+                } else {
+                    // Kinetica column is not mapped to any Kafka record field - missing incoming value
+                    if (!column.isNullable()) {
+                        // if the column is required (not nullable), record can't be saved to DB and should be failed
+                        throw new ConnectException(String.format("Required field %s of type %s was missing from Kafka record.", column.getName(), column.getType()));
+                    }
+                    // if the column is nullable, set it's value to null
                     outRecord.put(column.getName(), null);
-                }                
-                
+                }
             }
             catch(Exception ex) {
-                throw new Exception(String.format("Convert failed for column %s: %s",
+                throw new Exception(String.format("Convert failed for inField %s: %s",
                         column.getName(), ex.getMessage()), ex);
             }
         }
@@ -365,7 +383,7 @@ public class KineticaSinkTask extends SinkTask {
      * @return well-formed value object
      * @throws ConnectException
      */
-    private Object getColumnValue(String columnName, Object inRecord, Class<?> inRecordType) throws ConnectException {
+    private Object getColumnValue(String columnName, Object inRecord, Class<?> inRecordType, KineticaFieldMapper mapper) throws ConnectException {
         Object inValue;
         if(inRecordType == Struct.class) {
             // extract value from structure by name
@@ -374,9 +392,14 @@ public class KineticaSinkTask extends SinkTask {
             Struct structRec = (Struct)inRecord;
             try {
                 inValue = structRec.get(columnName);
+                    
             } catch (Exception e) {
-                LOG.warn("Field " + columnName + " is missing from data record");
-                return null;
+                if (this.schemaMgr.flattenSourceSchema) {
+                    inValue = getNestedValue(structRec, columnName);
+                } else {
+                    LOG.warn("Field " + columnName + " is missing from data record");
+                    return null;
+                }
             }
         }
         else if(inRecordType == HashMap.class) {
@@ -387,20 +410,68 @@ public class KineticaSinkTask extends SinkTask {
             HashMap<String, Object> hashRec = (HashMap<String, Object>)inRecord;
 
             hashRec = getColumnsFromMap(hashRec);
-            if(!hashRec.containsKey(columnName)) {
-                LOG.warn("Field " + columnName + " is missing from data record");
-                //hiding for now - schema evolution allows this scenario
-                //throw new ConnectException("Column is not found in record.");
-                return null;
+
+            if(hashRec.containsKey(columnName)) {
+                inValue = hashRec.get(columnName);
+            } else {
+                if (this.schemaMgr.flattenSourceSchema) {
+                    inValue = getNestedValue(hashRec, columnName);
+                } else {
+                    LOG.warn("Field " + columnName + " is missing from data record");
+                    //hiding for now - schema evolution allows this scenario
+                    //throw new ConnectException("Column is not found in record.");
+                    return null;
+                }
             }
 
-            inValue = hashRec.get(columnName);
         }
         else {
             throw new ConnectException("Record type not supported: " + inRecord.getClass().toString());
         }
 
         return inValue;
+    }
+    
+    private Object getNestedValue(Struct structRec, String columnName) {
+        
+        if (!columnName.contains(KineticaTypeConverter.separator)) {
+            return structRec.get(columnName);
+        } else {
+            String parent = columnName.split(KineticaTypeConverter.separator)[0];
+            String child = columnName.substring(parent.length()+1, columnName.length());
+            Struct childNode = structRec.getStruct(parent);
+
+            if (childNode.schema().type() == Schema.Type.STRUCT) {
+                return getNestedValue(childNode, child);
+            } else if (childNode.schema().type() == Schema.Type.ARRAY) {
+                return String.join(this.schemaMgr.arrayValueSeparator, childNode.getArray(child));
+            } else {
+                return childNode;
+            }
+            
+        }
+    }
+    
+    private Object getNestedValue(HashMap<String, Object> mapRecord, String columnName) {
+
+        if (!columnName.contains(KineticaTypeConverter.separator)) {
+            return mapRecord.get(columnName);
+        } else {
+            String parent = columnName.split(KineticaTypeConverter.separator)[0];
+            String child = columnName.substring(parent.length()+1, columnName.length());
+            Object childNode = mapRecord.get(parent);
+            if (childNode instanceof Map) {
+                return getNestedValue((HashMap<String, Object>)childNode, child);
+            } else if (childNode instanceof List) {
+                return KineticaTypeConverter.flattenArray(
+                    this.schemaMgr.arrayValueSeparator, this.schemaMgr.arrayFlatteningMode, (List)childNode);
+            } else if (childNode.getClass().isArray()) {
+                return KineticaTypeConverter.flattenArray(
+                    this.schemaMgr.arrayValueSeparator, this.schemaMgr.arrayFlatteningMode, Arrays.asList(childNode));
+            } else {
+                return childNode;
+            }
+        }
     }
 
     /**
@@ -431,8 +502,11 @@ public class KineticaSinkTask extends SinkTask {
             outValue = inValue;
         }
         else if(Number.class.isAssignableFrom(inType)) {
-            // convert numbers
             Number inNumber = (Number)inValue;
+            if (outType == String.class) {
+                outValue = inNumber.toString();
+            } else 
+            // convert numbers
             if(outType == Long.class) {
                 outValue = inNumber.longValue();
             }
@@ -448,11 +522,17 @@ public class KineticaSinkTask extends SinkTask {
             else if(outType == String.class && column.getProperties().contains("datetime")) {
                 outValue = tsFormatter.format(new Date(inNumber.longValue()));
             }
-            else {
+            else if(outType == String.class) {
+                try {
+                    outValue = String.valueOf(inValue);
+                } catch (Exception e) {
+                    throw new ConnectException("Failed to convert incoming number to string.", e);
+                }
+            } else {
                 throw new ConnectException(String.format("Could not convert numeric type: %s -> %s",
-                            inType.getName(), outType.getName()));
+                    inType.getName(), outType.getName()));
             }
-        }
+        } 
         else if(inValue instanceof String && column.getProperties().contains("timestamp")) {
             // convert timestamp
             String dateStr = (String)inValue;
@@ -472,15 +552,35 @@ public class KineticaSinkTask extends SinkTask {
             // convert serialized bytes
             outValue = ByteBuffer.wrap((byte[])inValue);
         }
-        else if(inValue instanceof Boolean && outType == String.class) {
-            // converted boolean data to String
-            outValue = inValue.toString();
+        else if(inValue instanceof Boolean) {
+            if (outType == String.class) {
+                // converted boolean data to String
+                outValue = inValue.toString();
+            } else {
+                // convert boolean data to int
+                outValue = (Boolean) inValue == true ? 1 : 0;
+            }
         }
-        else {
-            throw new ConnectException(String.format("Type mismatch. Expected %s but got %s.",
-                    outType.getSimpleName(), inType.getSimpleName()));
-        }
+        else if (this.schemaMgr.flattenSourceSchema) {
+            if (inValue instanceof List) {
+                outValue = KineticaTypeConverter.flattenArray(
+                    this.schemaMgr.arrayValueSeparator, 
+                    this.schemaMgr.arrayFlatteningMode, 
+                    (List) inValue);
+            } else if (inValue.getClass().isArray() ) {
+                outValue = KineticaTypeConverter.flattenArray(
+                    this.schemaMgr.arrayValueSeparator, 
+                    this.schemaMgr.arrayFlatteningMode, 
+                    Arrays.asList(inValue));
+            } else {
+                LOG.debug("Object needs flattening, but is not a list or array " + inValue.getClass().getSimpleName());
+                outValue = null;
+            }
 
+        } else {
+            throw new ConnectException(String.format("Type mismatch. Expected %s but got %s. Failed value is '%s'.",
+                    outType.getSimpleName(), inType.getSimpleName(), inValue.toString()));
+        }
         return outValue;
     }
 

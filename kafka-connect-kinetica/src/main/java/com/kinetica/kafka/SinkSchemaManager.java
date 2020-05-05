@@ -22,6 +22,7 @@ import com.gpudb.Type.Column;
 import com.gpudb.protocol.AlterTableColumnsRequest;
 import com.gpudb.protocol.AlterTableRequest;
 import com.gpudb.protocol.CreateTableRequest;
+import com.gpudb.protocol.CreateTableResponse;
 import com.gpudb.protocol.InsertRecordsRequest;
 
 public class SinkSchemaManager {
@@ -41,6 +42,10 @@ public class SinkSchemaManager {
     protected final boolean singleTablePerTopic;
     protected final boolean allowSchemaEvolution;
     protected final boolean updateOnExistingPK;
+    protected final boolean flattenSourceSchema;
+    protected final String fieldNameDelimiter;
+    protected final String arrayValueSeparator;
+    protected final KineticaSinkConnectorConfig.ARRAY_FLATTENING arrayFlatteningMode;
     private final int retryCount;
     
     private final HashMap<String, List<Integer>> knownSchemas = new HashMap<>();
@@ -82,6 +87,28 @@ public class SinkSchemaManager {
                 props.get(KineticaSinkConnectorConfig.PARAM_ALLOW_SCHEMA_EVOLUTION) );
         this.updateOnExistingPK = Boolean.parseBoolean(
                 props.get(KineticaSinkConnectorConfig.PARAM_UPDATE_ON_EXISTING_PK) );
+        this.flattenSourceSchema = Boolean.parseBoolean(
+                props.get(KineticaSinkConnectorConfig.PARAM_FLATTEN_SOURCE_SCHEMA) );
+        
+        if (props.containsKey(KineticaSinkConnectorConfig.PARAM_FIELD_NAME_DELIMITER)) {
+        	this.fieldNameDelimiter = props.get(KineticaSinkConnectorConfig.PARAM_FIELD_NAME_DELIMITER);
+        } else {
+        	this.fieldNameDelimiter = KineticaSinkConnectorConfig.DEFAULT_FIELD_NAME_DELIMITER;
+        }
+        
+        if (props.containsKey(KineticaSinkConnectorConfig.PARAM_ARRAY_VALUE_SEPARATOR)) {
+        	this.arrayValueSeparator = props.get(KineticaSinkConnectorConfig.PARAM_ARRAY_VALUE_SEPARATOR);
+        } else {
+        	this.arrayValueSeparator = KineticaSinkConnectorConfig.DEFAULT_ARRAY_VALUE_SEPARATOR;
+        }
+        
+        if (props.containsKey(KineticaSinkConnectorConfig.PARAM_ARRAY_FLATTENING_MODE) && 
+        		props.get(KineticaSinkConnectorConfig.PARAM_ARRAY_FLATTENING_MODE) != null &&
+        		!props.get(KineticaSinkConnectorConfig.PARAM_ARRAY_FLATTENING_MODE).isEmpty()) {
+            this.arrayFlatteningMode = KineticaSinkConnectorConfig.ARRAY_FLATTENING.valueOf(props.get(KineticaSinkConnectorConfig.PARAM_ARRAY_FLATTENING_MODE));
+        } else {
+            this.arrayFlatteningMode = KineticaSinkConnectorConfig.ARRAY_FLATTENING.CONVERT_TO_STRING;
+        }
 
         String url = props.get(KineticaSinkConnectorConfig.PARAM_URL);
         try {
@@ -107,7 +134,7 @@ public class SinkSchemaManager {
     public BulkInserter<GenericRecord> getBulkInserter(String tableName, Type gpudbSchema) throws GPUdbException {
         HashMap<String,String> options = new HashMap<>();
         options.put(InsertRecordsRequest.Options.UPDATE_ON_EXISTING_PK, 
-        		(this.updateOnExistingPK ? InsertRecordsRequest.Options.TRUE : InsertRecordsRequest.Options.FALSE));
+                (this.updateOnExistingPK ? InsertRecordsRequest.Options.TRUE : InsertRecordsRequest.Options.FALSE));
         BulkInserter<GenericRecord> result = new BulkInserter<>(this.gpudb, tableName, gpudbSchema, this.batchSize, options);
         result.setRetryCount(this.retryCount);
         return result;
@@ -127,6 +154,9 @@ public class SinkSchemaManager {
     public String getDestTable(String topic, String inputSchema) throws Exception {
         // override tablename is not empty
         if(this.tableOverride!=null && !this.tableOverride.isEmpty()) {
+            // many topics to single table override, destination table name is well-formed
+            if (!this.singleTablePerTopic && !this.tableOverride.contains(",") )
+                return this.tableOverride;
             // override tablename is not a list and topics not a list
             if (!this.tableOverride.contains(",") 
                     && !this.topics.contains(",")){
@@ -142,26 +172,30 @@ public class SinkSchemaManager {
                 throw new ConnectException("Could not determine an override table name for the topic from config params.");  
             }
         }
+        
+        // Clean up prefix
+        String prefix = (this.tablePrefix != null && !this.tablePrefix.isEmpty()) ? this.tablePrefix.trim() : "";
+        
         // no override defined, determine table name from topic/schema and prefix
         if (this.singleTablePerTopic) {
             // single table per topic
             LOG.debug("Single table per topic");
             // if topic is undefined, take simple name of schema object
             if (topic == null || topic.isEmpty()) {
-                return this.tablePrefix + getSimpleName(inputSchema);
+                return prefix + getSimpleName(inputSchema);
             }
             // otherwise name table after topic
-            return this.tablePrefix + topic;
+            return prefix + topic;
         } else {
             // for multiple tables per topic
             LOG.debug("Multiple tables per topic objects " + inputSchema);
             if(inputSchema == null) {
                 LOG.error("Could not determine table name from Schema, generating table name from topic.");
-                return this.tablePrefix + topic;
+                return prefix + topic;
             }
         
             // generate the table from the schema
-            return this.tablePrefix + getSimpleName(inputSchema);
+            return prefix + getSimpleName(inputSchema);
         }
         
     }
@@ -355,36 +389,65 @@ public class SinkSchemaManager {
         if (!kineticaTableExists) {
             // table does not exist and can't be created
             if(!this.createTable) {
-                throw new ConnectException(String.format("Table {} does not exist and config option {}=false ", 
+                throw new ConnectException(String.format("Table %s does not exist and config option %s=false ", 
                         tableName, KineticaSinkConnectorConfig.PARAM_CREATE_TABLE)) ;
             }
+            
+            KineticaFieldMapper mapper = addBlankFieldMapper(tableName, version);
 
             if(schema instanceof Schema) {
+                LOG.debug("Kafka schema");
                 // extract list of columns for new table from Kafka schema
                 LOG.debug("Converting type from Kafka Schema for table: {}", tableName);
-                gpudbType = KineticaTypeConverter.convertTypeFromSchema((Schema) schema);            
+                if (this.flattenSourceSchema) { 
+                    gpudbType = KineticaTypeConverter.convertNestedTypeFromSchema(
+                        (Schema) schema, 
+                        this.fieldNameDelimiter, 
+                        this.arrayFlatteningMode, 
+                        this.arrayValueSeparator,
+                        mapper);
+                } else {
+                    gpudbType = KineticaTypeConverter.convertTypeFromSchema((Schema) schema, mapper);            
+                }
             } 
             else if(schema instanceof org.apache.avro.Schema) {
+                LOG.debug("Avro schema");
                 // extract list of columns for new table from avro schema
                 LOG.debug("Converting type from Avro Schema for table: {}", tableName);
-                gpudbType = KineticaTypeConverter.convertTypeFromAvroSchema((org.apache.avro.Schema) schema);
+                if (this.flattenSourceSchema) { 
+                    gpudbType = KineticaTypeConverter.convertNestedTypeFromAvroSchema(
+                        (org.apache.avro.Schema) schema,
+                        this.fieldNameDelimiter, 
+                        this.arrayFlatteningMode, 
+                        this.arrayValueSeparator,
+                        mapper);
+                } else {
+                    gpudbType = KineticaTypeConverter.convertTypeFromAvroSchema((org.apache.avro.Schema) schema, mapper);
+                }
             } 
             else if (schema instanceof HashMap) {
+                LOG.debug("Schemaless");
                 // extract list of columns for new table from column name/value hashmap
                 LOG.debug("Converting type from schema-less HashMap");
                 @SuppressWarnings("unchecked")
                 HashMap<String,Object> mapSchema = (HashMap<String,Object>)schema;
-                gpudbType = KineticaTypeConverter.convertTypeFromMap(mapSchema);
+                // No nested types can be parsed at this point, due to WorkerSinkTask 
+                // throwing an error for badly formed JSON earlier than KineticaSinkTask is called.
+                // Apply schema flattening of schemaless JSON by adding transform to connector config:
+                // transforms=Flatten
+                // transforms.Flatten.type=org.apache.kafka.connect.transforms.Flatten$Value
+                // transforms.Flatten.delimiter=_
+                gpudbType = KineticaTypeConverter.convertTypeFromMap(mapSchema, mapper);
                 
             }
             else {
                 // schema is missing, incoming object of unknown type, can't extract columns 
                 throw new ConnectException("Schema-less records must be a hashmap: " + schema.getClass().toString());
             }
-
-            // create a type, then create table
+            
+            // Create a type, then create table
             String typeId = gpudbType.create(this.gpudb);
-            LOG.info("Creating table: {}", tableName);        
+            LOG.info("Creating table: {}", tableName);
             this.gpudb.createTable(tableName, typeId,
                         GPUdbBase.options(CreateTableRequest.Options.COLLECTION_NAME, this.collectionName) );
             // and add table name to recognized schemas
@@ -395,7 +458,7 @@ public class SinkSchemaManager {
             // for a brand new table create a mapper
             addFieldMapper(tableName, version, gpudbType);
         } 
-        mapAllFields(tableName, version, gpudbType);
+        //mapAllFields(tableName, version, gpudbType);
 
         return gpudbType;
     }
@@ -412,17 +475,36 @@ public class SinkSchemaManager {
      */
     protected AlterTableColumnsRequest matchSchemas(String tableName, Object genericSchema, Type cachedType) throws Exception {
         LOG.debug("matchSchemas started for " + tableName);
+        Integer version = versionOf(genericSchema);
+        KineticaFieldMapper mapper = getFieldMapper(tableName, version);
+        
         AlterTableColumnsRequest result = new AlterTableColumnsRequest(tableName, null, null);
         result.getOptions().put(AlterTableRequest.Options.COLUMN_PROPERTIES,  com.gpudb.ColumnProperty.NULLABLE);
         Type incoming;
         if (genericSchema instanceof Schema) {
-            incoming = KineticaTypeConverter.convertTypeFromSchema((Schema)genericSchema); 
+            if (this.flattenSourceSchema) {
+                incoming = KineticaTypeConverter.convertNestedTypeFromSchema((Schema)genericSchema, 
+                    this.fieldNameDelimiter, 
+                    this.arrayFlatteningMode, 
+                    this.arrayValueSeparator, mapper);
+            } else {
+                incoming = KineticaTypeConverter.convertTypeFromSchema((Schema)genericSchema, mapper);
+            }
         } else if (genericSchema instanceof org.apache.avro.Schema) {
             org.apache.avro.Schema writer = (org.apache.avro.Schema) genericSchema;
-            incoming = KineticaTypeConverter.convertTypeFromAvroSchema(writer);
+            if (this.flattenSourceSchema) {
+                incoming = KineticaTypeConverter.convertNestedTypeFromAvroSchema(
+                        writer, 
+                        this.fieldNameDelimiter, 
+                        this.arrayFlatteningMode, 
+                        this.arrayValueSeparator, 
+                        mapper);
+            } else {
+                incoming = KineticaTypeConverter.convertTypeFromAvroSchema(writer, mapper);
+            }
         } else if (genericSchema instanceof HashMap) {
             HashMap<String, Object> writer = (HashMap<String, Object>) genericSchema;
-            incoming = KineticaTypeConverter.convertTypeFromMap(writer);
+            incoming = KineticaTypeConverter.convertTypeFromMap(writer, mapper);
         } else {
             throw new ConnectException("Unsupported schema type " + genericSchema.getClass() + ", schema match failed.");
         }
@@ -430,10 +512,6 @@ public class SinkSchemaManager {
         HashMap<String, Column> existingFields = new HashMap<String, Column>();        
         HashMap<String, Column> incomingFields = new HashMap<String, Column>();
         
-        Integer version = versionOf(genericSchema);
-
-        KineticaFieldMapper mapper = addBlankFieldMapper(tableName, version);
-
         for (Column column : cachedType.getColumns()) {
             existingFields.put(column.getName(), column);
         }
@@ -459,7 +537,7 @@ public class SinkSchemaManager {
                     alterations.put(AlterTableRequest.Options.COLUMN_PROPERTIES, com.gpudb.ColumnProperty.NULLABLE);
                     String val = getFieldDefaultValue(incomingField.getName(), genericSchema);
                     if (val != null) {
-                    	alterations.put(AlterTableRequest.Options.COLUMN_DEFAULT_VALUE, val);
+                        alterations.put(AlterTableRequest.Options.COLUMN_DEFAULT_VALUE, val);
                     }
 
                     result.getColumnAlterations().add(alterations);
@@ -560,6 +638,7 @@ public class SinkSchemaManager {
         KineticaFieldMapper mapper = getFieldMapper(tableName, version);
         for (Column col : gpudbType.getColumns()) {
             mapper.getMapped().put(col.getName(), col);
+            mapper.getLookup().put(col.getName(), col.getName());
         }
         updateFieldMappers(tableName, version, mapper);    
     }
@@ -576,6 +655,7 @@ public class SinkSchemaManager {
         KineticaFieldMapper mapper = addBlankFieldMapper(tableName, version);
         for (Column col : gpudbType.getColumns()) {
             mapper.getMapped().put(col.getName(), col);
+            mapper.getLookup().put(col.getName(), col.getName());
         }
         updateFieldMappers(tableName, version, mapper);
     }
@@ -592,7 +672,7 @@ public class SinkSchemaManager {
         }
         if (!knownMappers.get(tableName).containsKey(version)) {            
             knownMappers.get(tableName).put(version, new KineticaFieldMapper(tableName, version));
-        } 
+        }
         return knownMappers.get(tableName).get(version);
     }
     
@@ -613,7 +693,6 @@ public class SinkSchemaManager {
                 // for all columns mapped in most recent mapper
                 for (String colName : mapper.getMapped().keySet()) {
                     // if a column is missing from both mapped and missing  
-                    // columns of old mapper, add it to missing columns 
                     if (!old.getMapped().keySet().contains(colName) && !old.getMissing().keySet().contains(colName)) {
                         old.getMissing().put(colName, mapper.getMapped().get(colName));
                     }
@@ -641,19 +720,19 @@ public class SinkSchemaManager {
     }
     
     protected String getFieldDefaultValue(String name, Object genericSchema) {
-    	try {
+        try {
             if (genericSchema instanceof Schema) {
-            	org.apache.kafka.connect.data.Field field = ((Schema)genericSchema).field(name);
+                org.apache.kafka.connect.data.Field field = ((Schema)genericSchema).field(name);
                 return (String)field.schema().defaultValue();
             } 
             if (genericSchema instanceof org.apache.avro.Schema) {
                 org.apache.avro.Schema.Field field = ((org.apache.avro.Schema) genericSchema).getField(name);
                 return (String)field.defaultVal();
             }
-    		return null;
-    	} catch (Exception e) {
-    		LOG.error(e.getMessage() + e.getStackTrace());
-    		return null;
-    	}
+            return null;
+        } catch (Exception e) {
+            LOG.error(e.getMessage() + e.getStackTrace());
+            return null;
+        }
     }
 }

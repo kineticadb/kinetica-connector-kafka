@@ -2,11 +2,32 @@
 
 ## Version 7.0
 
+### Version 7.0.2.0 -- 2020-04-28
+
+#### Added
+
+-   `kinetica.flatten_source.enabled` option to turn on
+    flattening of nested Avro JSON schema and support
+    Avro JSON MAP and ARRAY types ingest (default false).
+-   `kinetica.flatten_source.field_name_delimiter` option
+    to be used when concatenating nested schema field names
+    into Kinetica column name (default '_').
+-   `kinetica.flatten_source.array_flattening_mode` option
+    to define ARRAY schema type conversion to single column
+    (default CONVERT_TO_STRING).
+-   `kinetica.flatten_source.array_element_separator`
+    option to configure value separator symbol (i.e. '|')
+    for concatenating stringified ARRAY values during
+    schema flattening (default ',').
+
+#### Updated
+-   Kafka version support to 2.4.1 version.
+
 ### Version 7.0.1.3 -- 2019-05-07
 
 #### Changed
 
--   /alter/table endpoint to /alter/table/columns endpoint 
+-   /alter/table endpoint to /alter/table/columns endpoint
 for performance improvement on table altering operations.
 -   Updated the dependent Kinetica Java API version to 7.0.3.0
     to get the latest high availability support related changes.
@@ -20,9 +41,9 @@ for performance improvement on table altering operations.
 
 ### Version 7.0.1.1 - 2019-04-01
 
-####   Fixed 
+####   Fixed
 
--   datetime type conversion (on ingest format Long timestamp 
+-   datetime type conversion (on ingest format Long timestamp
 to String datetime)
 
 
@@ -40,8 +61,8 @@ to String datetime)
 -   license references, updated project docs and readme file
 -   ability to handle no-key JSON data
 -   BulkInserter flush before shutdown
--   test-connect project for Kafka datapump helper classes 
--   separate README.md file with detailed connector configurations 
+-   test-connect project for Kafka datapump helper classes
+-   separate README.md file with detailed connector configurations
 for different Kafka message formats and data ingest scenarios
 
 
@@ -71,7 +92,7 @@ for different Kafka message formats and data ingest scenarios
 
 ### Version 5.2.0 -- 2016-10-19
 
-#### Changed 
+#### Changed
 
 -   configuration to use ConfigDef
 -   failure propagation to the framework

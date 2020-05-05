@@ -4,7 +4,7 @@
 
     <groupId>com.kinetica</groupId>
     <artifactId>kafka-connect-kinetica</artifactId>
-    <version>7.0.1.3</version>
+    <version>7.0.2.0</version>
     <packaging>jar</packaging>
 
     <name>Kafka Connector for Kinetica DB</name>
@@ -16,8 +16,8 @@
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven-jar-plugin.version>3.0.2</maven-jar-plugin.version>        
-        <gpudb-api.version>[7.0.3.0,7.1.0.0-SNAPSHOT)</gpudb-api.version>
-        <java.version>1.7</java.version>
+        <gpudb-api.version>[7.0.15.0,7.1.0.0-SNAPSHOT)</gpudb-api.version>
+        <java.version>1.8</java.version>
         <zeromq.version>0.3.5</zeromq.version>
         <kafka.version>2.0.0</kafka.version>
     </properties>
@@ -61,6 +61,7 @@
             <groupId>com.gpudb</groupId>
             <artifactId>gpudb-api</artifactId>
             <version>${gpudb-api.version}</version>
+            <classifier>avroshaded</classifier>
         </dependency>
         <dependency>
             <groupId>org.zeromq</groupId>
@@ -91,6 +92,12 @@
              </exclusions>
          </dependency>
         
+         <dependency>
+            <groupId>org.apache.kafka</groupId>
+            <artifactId>connect-transforms</artifactId>
+            <version>${kafka.version}</version>
+            <scope>provided</scope>
+        </dependency>        
 
         <!-- Test scope -->
         <dependency>

@@ -1,14 +1,14 @@
 # Kinetica Kafka Connector
 
-The following guide provides step by step instructions how to build and integrate 
-Kinetica connector with Kafka platform. It can be integrated as a part of Kafka stack or 
+The following guide provides step by step instructions how to build and integrate
+Kinetica connector with Kafka platform. It can be integrated as a part of Kafka stack or
 Confluent platform.
 
-This project is aimed to make Kafka topics accessible to Kinetica, meaning data can be streamed 
+This project is aimed to make Kafka topics accessible to Kinetica, meaning data can be streamed
 from a Kinetica table or to a Kinetica table via **Kafka Connect**. The custom **Kafka Source Connector**
-and **Kafka Sink Connector** do no additional processing. (There is a separate set of parameters in 
-connect-standalone.properties that allows lightweight message-at-a-time data transformations, such as 
-create a new column from Kafka message timestamp. It’s a part of worker task configuration that’s configured 
+and **Kafka Sink Connector** do no additional processing. (There is a separate set of parameters in
+connect-standalone.properties that allows lightweight message-at-a-time data transformations, such as
+create a new column from Kafka message timestamp. It’s a part of worker task configuration that’s configured
 as a part of Kafka Connect.)
 
 The two connector classes that integrate **Kinetica** with **Kafka** are:
@@ -31,22 +31,22 @@ The two connector classes that integrate **Kinetica** with **Kafka** are:
 
 ## Installation & Configuration
 The connector provided in this project assumes launching will be done on a server capable of
-running Kinetica Kafka connectors in standalone mode or to a cluster. 
+running Kinetica Kafka connectors in standalone mode or to a cluster.
 
 ### Version support
 
-Kinetica Kafka connector has a property parameter in the `pom.xml` properties to set **Kafka** version. 
-Connector build process would add **Kafka** version to the jar name for easy reference: 
-`kafka-2.0.0-connector-kinetica-7.0.x.y-jar-with-dependencies.jar`. 
-Connector code is Java 7 compatible and does not require a separate build to support Java 8 environment. 
+Kinetica Kafka connector has a property parameter in the `pom.xml` properties to set **Kafka** version.
+Connector build process would add **Kafka** version to the jar name for easy reference:
+`kafka-2.0.0-connector-kinetica-7.0.x.y-jar-with-dependencies.jar`.
+Connector code is Java 7 compatible and does not require a separate build to support Java 8 environment.
 
-**Kafka Connect** allows you to configure the Kinetica Kafka Connector exactly the same for 
-plain **Kafka** stack or integrated **Confluent** platform. The following table is provided 
-for the ease of identifying compatible dependency versions. Based on Kafka version or Confluent platform 
-version, edit `pom.xml` project properties to build connector compatible with your **Kafka** version. 
+**Kafka Connect** allows you to configure the Kinetica Kafka Connector exactly the same for
+plain **Kafka** stack or integrated **Confluent** platform. The following table is provided
+for the ease of identifying compatible dependency versions. Based on Kafka version or Confluent platform
+version, edit `pom.xml` project properties to build connector compatible with your **Kafka** version.
 
-| Confluent Platform | Apache Kafka | Java version | 
-| :--- | :--- | :--- | 
+| Confluent Platform | Apache Kafka | Java version |
+| :--- | :--- | :--- |
 | 3.1.x | 0.10.1.x | 1.7.0_60, 1.8.0_60 |
 | 3.2.x | 0.10.2.x | 1.7.0_60, 1.8.0_60 |
 | 3.3.x | 0.11.0.x | 1.7.0_60, 1.8.0_60 |
@@ -54,9 +54,9 @@ version, edit `pom.xml` project properties to build connector compatible with yo
 | 4.1.x | 1.1.x | 1.7.0_60, 1.8.0_60 |
 | 5.0.x | 2.0.x | 1.8.0_60 |
 | 5.1.x | 2.1.x | 1.8.0_60 |
+| 5.4.1 | 2.4.1 | 1.8.0_60 |
 
-
-Clone and build the project as follows: 
+Clone and build the project as follows:
 
 ```sh
 git clone https://github.com/kineticadb/kinetica-connector-kafka
@@ -64,7 +64,7 @@ cd kinetica-connector-kafka/kafka-connect-kinetica
 mvn clean compile package -DskipTests=true
 ```
 
-To run JUnit tests as part of build process, make sure that you have a running Kinetica instance, and that 
+To run JUnit tests as part of build process, make sure that you have a running Kinetica instance, and that
 its URL and user credentials are properly configured in files `config/quickstart-kinetica-sink.properties`
 and `config/quickstart-kinetica-source.properties`, then run
 
@@ -80,22 +80,22 @@ Three JAR files are produced by the Maven build in `kinetica-connector-kafka/tar
 
 ## Kinetica Kafka Connector Plugin
 
-A Kafka Connect plugin is simply a set of JAR files where Kafka Connect can find an 
-implementation of one or more connectors, transforms, and/or converters. Kafka Connect 
-isolates each plugin from one another so that libraries in one plugin are not affected 
-by the libraries in any other plugins. 
+A Kafka Connect plugin is simply a set of JAR files where Kafka Connect can find an
+implementation of one or more connectors, transforms, and/or converters. Kafka Connect
+isolates each plugin from one another so that libraries in one plugin are not affected
+by the libraries in any other plugins.
 
 A Kafka Connect plugin is either:
 
-* an *uber JAR* containing all of the classfiles for the plugin and its third-party 
+* an *uber JAR* containing all of the classfiles for the plugin and its third-party
 dependencies in a single JAR file; see
 
 ```bash
 kinetica-connector-kafka/kafka-connect-kinetica/target/kafka-<ver>-connector-kinetica-<ver>-jar-with-dependencies.jar
 ```
-  
-OR  
-* a *directory* on the file system that contains the JAR files for the plugin and 
+
+OR
+* a *directory* on the file system that contains the JAR files for the plugin and
 its third-party dependencies, see
 
 ```bash
@@ -117,18 +117,18 @@ kinetica-connector-kafka/kafka-connect-kinetica/target/kafka-<ver>-connector-kin
     |-- java
         |-- kafka-connect-kinetica
             |-- ...
-            |-- kafka-connect-kinetica-<ver>.jar            
+            |-- kafka-connect-kinetica-<ver>.jar
             |-- ...
-            |-- xz-1.5.jar            
+            |-- xz-1.5.jar
 ```
 
 
 ### Installing Kinetica Kafka Connector on plain Kafka stack
 
-To install the connector at the target server location for plain **Kafka**, copy the uber JAR 
-`kafka-<ver>-connector-kinetica-<ver>-jar-with-dependencies.jar` into `KAFKA_HOME/libs/` folder and make 
-sure configuration in `KAFKA_HOME/config/connect-distributed.properties` and 
-`KAFKA_HOME/config/connect-standalone.properties` files matches the configuration you've tested 
+To install the connector at the target server location for plain **Kafka**, copy the uber JAR
+`kafka-<ver>-connector-kinetica-<ver>-jar-with-dependencies.jar` into `KAFKA_HOME/libs/` folder and make
+sure configuration in `KAFKA_HOME/config/connect-distributed.properties` and
+`KAFKA_HOME/config/connect-standalone.properties` files matches the configuration you've tested
 with your Kafka connector. Any additional properties files you might
 need should go in the same folder `KAFKA_HOME/config/`.
 
@@ -148,9 +148,9 @@ mkdir /CONFLUENT_HOME/share/doc/kafka-connect-kinetica
 cp target/kafka-<ver>-connector-kinetica-<ver>-package/share/doc/* /CONFLUENT_HOME/share/doc/kafka-connect-kinetica/
 ```
 
-> Instead of copying multiple jars into `/CONFLUENT_HOME/share/java/kafka-connect-kinetica/` you can copy the uber JAR. 
+> Instead of copying multiple jars into `/CONFLUENT_HOME/share/java/kafka-connect-kinetica/` you can copy the uber JAR.
 > **Note** Following this convention accurately when naming folders and placing connector jar and its configuration properties accordingly is essential to load and start/stop the connector remotely through REST service. Unique Connector name in quickstart properties would be passed to REST service.
-> `kafka-connect-kinetica` folder name would be treated both as the connector identification and as a part of the path built on the fly when the connector is engaged. 
+> `kafka-connect-kinetica` folder name would be treated both as the connector identification and as a part of the path built on the fly when the connector is engaged.
 > Starting folder name with `kafka-connect-<connector name>` is a Confluent convention used for all Kafka Connect components, such as jdbc, s3, hdfs, and others.
 
 
@@ -158,20 +158,20 @@ cp target/kafka-<ver>-connector-kinetica-<ver>-package/share/doc/* /CONFLUENT_HO
 
 Users can run Kafka Connect in two ways: standalone mode or distributed mode.
 
-In *standalone mode*, a single process runs all the connectors. It is not fault tolerant. 
-Since it uses only a single process, it is not scalable. Standalone mode is used for 
-proof of concept and demo purposes, integration or unit testing, and 
-it is managed through CLI. 
+In *standalone mode*, a single process runs all the connectors. It is not fault tolerant.
+Since it uses only a single process, it is not scalable. Standalone mode is used for
+proof of concept and demo purposes, integration or unit testing, and
+it is managed through CLI.
 
 In *distributed mode*, multiple workers run Kafka Connect and are aware of each others'
 existence, which can provide fault tolerance and coordination between them and during the
-event of reconfiguration. In this mode, Kafka Connect is scalable and fault tolerant, 
-so it is generally used in production deployment. Distributed mode provides flexibility, 
-scalability and high availability, it's mostly used in production in cases of heavy 
+event of reconfiguration. In this mode, Kafka Connect is scalable and fault tolerant,
+so it is generally used in production deployment. Distributed mode provides flexibility,
+scalability and high availability, it's mostly used in production in cases of heavy
 data volume, and it is managed through REST interface.
 
 
-### Standalone mode 
+### Standalone mode
 
 When testing the connector in standalone mode, use the following syntax:
 
@@ -185,25 +185,25 @@ or
 CONFLUENT_HOME>bin/connect-standalone etc/kafka/connect-standalone.properties \
 	etc/kafka-connect-kinetica/quickstart-kinetica.properties
 ```
-Where `connect-standalone.properties` is used to configure worker tasks and 
-`quickstart-kinetica.properties` is used to configure the connector itself. 
+Where `connect-standalone.properties` is used to configure worker tasks and
+`quickstart-kinetica.properties` is used to configure the connector itself.
 
 Worker tasks and connector configurations use different configuration parameters,
-do not add connector configuration params to work task configuration, because they 
-would be ignored. Configurations for sink and source connectors differ in the name and 
+do not add connector configuration params to work task configuration, because they
+would be ignored. Configurations for sink and source connectors differ in the name and
 number of parameters, although some parameters are common.
 
-When you start a connector (sink or source), it should have its own dedicated port 
-set with `rest.port` parameter. You can't use the same `connect-standalone.properties` 
-file for different connectors running simultaneously, and it is not required, but overall 
-very useful to have separate configuration files named `connect-standalone-sink.properties` 
-and `connect-standalone-source.properties` with preset port values, such as sink `rest.port=8090` 
-and source `rest.port=8089`. 
+When you start a connector (sink or source), it should have its own dedicated port
+set with `rest.port` parameter. You can't use the same `connect-standalone.properties`
+file for different connectors running simultaneously, and it is not required, but overall
+very useful to have separate configuration files named `connect-standalone-sink.properties`
+and `connect-standalone-source.properties` with preset port values, such as sink `rest.port=8090`
+and source `rest.port=8089`.
 
 ### Distributed mode
 
-Kafka Connector configuration sent in REST calls has the same config properties that 
-are listed in `connect-standalone-sink.properties` and `connect-standalone-source.properties` 
+Kafka Connector configuration sent in REST calls has the same config properties that
+are listed in `connect-standalone-sink.properties` and `connect-standalone-source.properties`
 for Standalone deployment, but should formatted as an application/json object. For example,
 this is the Source connector JSON:
 
@@ -217,7 +217,7 @@ this is the Source connector JSON:
       "kinetica.url":"http://localhost:9191",
       "kinetica.table_names":"KafkaConnectorTest"
    }
-} 
+}
 ```
 
 The value of "name" parameter should be consistent and is the same for outer object (connector) and
@@ -231,11 +231,11 @@ KAFKA_HOME>./bin/connect-distributed.sh config/connect-distributed.properties
 or
 
 ```sh
-CONFLUENT_HOME>bin/connect-distributed etc/kafka/connect-distributed.properties 
+CONFLUENT_HOME>bin/connect-distributed etc/kafka/connect-distributed.properties
 ```
 
 By default Kafka Connect is listening on port 8083, assuming your bootstrap server ip is 127.0.0.1,
-here are the available REST syntax examples: 
+here are the available REST syntax examples:
 
 #### GET /connectors
 Check the available connectors:
@@ -356,7 +356,7 @@ curl -X DELETE http://127.0.0.1:8083/connectors/kinetica-source-connector
 #no response/ 204 No Content
 ```
 
-For more considerations on using Kafka Connect REST API please refer to [Confluent web site][CONFLUENT_REST_API]. 
+For more considerations on using Kafka Connect REST API please refer to [Confluent web site][CONFLUENT_REST_API].
 [CONFLUENT_REST_API]: <https://docs.confluent.io/current/connect/references/restapi.html>
 
 ## Streaming Data from Kinetica into Kafka
@@ -367,7 +367,7 @@ tables and publish the inserted rows to separate topics. A separate **Kafka topi
 for each database table configured. Data will be streamed in flat **Kafka Connect** `Struct`  format
 with one field for each table column.
 
-The `KineticaSourceConnector` is configured through `KineticaSourceConnectorConfig` 
+The `KineticaSourceConnector` is configured through `KineticaSourceConnectorConfig`
 class using `quickstart-kinetica-source.properties` file that accepts the following
 parameters:
 
@@ -383,8 +383,8 @@ parameters:
 | `kinetica.topic_prefix`| Y | Token prepended to the name of each topic (see below) |
 | `kinetica.timeout` | N | Timeout in milliseconds (default = none) |
 
-The connector uses the `kinetica.topic_prefix` to generate the name for destination topic from the 
-`kinetica.table_names`. For example, if topic_prefix is `Tweets.` and an insert is made to table 
+The connector uses the `kinetica.topic_prefix` to generate the name for destination topic from the
+`kinetica.table_names`. For example, if topic_prefix is `Tweets.` and an insert is made to table
 `KafkaConnectorTest` then it would  publish the change to topic `Tweets.KafkaConnectorTest`.
 
 
@@ -413,11 +413,11 @@ will be created if they do not exist.
 **Warning:** If the target table does not exist, the connector will create it based on the information
 available in the Kafka schema. This information is missing gpudb column attributes like
 `timestamp`, `shard_key`, and `charN`. If these attributes are important then you should create the
-table in advance of running the connector so it will use the existing table. 
+table in advance of running the connector so it will use the existing table.
 
 
-The `KineticaSinkConnector` is configured through `KineticaSinkConnectorConfig` 
-using `quickstart-kinetica-sink.properties` file (available in kafka-connect-kinetica/config) 
+The `KineticaSinkConnector` is configured through `KineticaSinkConnectorConfig`
+using `quickstart-kinetica-sink.properties` file (available in kafka-connect-kinetica/config)
 that accepts the following parameters:
 
 | Property Name | Required | Description |
@@ -442,6 +442,10 @@ that accepts the following parameters:
 | `kinetica.add_new_fields_as_columns`| N | When schema evolution is supported and Kafka message has a new field, connector attempts to insert a column for it into Kinetica table. (default = false) |
 | `kinetica.make_missing_field_nullable`| N | When schema evolution is supported and Kafka message does not have a required field, connector attempts to alter corresponding table column, making it nullable. (default = false) |
 | `kinetica.retry_count`| N | Number of attempts to insert data before task fails. (default = 1) |
+| `kinetica.flatten_source.enabled`| N | When true, connector attempts to flatten nested schema for incoming messages. (default = false) |
+| `kinetica.flatten_source.field_name_delimiter` | N | Symbol to be used when concatenating nested schema field names into Kinetica column name. (default '_') |
+| `kinetica.flatten_source.array_flattening_mode` | N | Different modes to convert ARRAY values into single column. (default CONVERT_TO_STRING) |
+| `kinetica.flatten_source.array_element_separator` | N | Custom value separator used when stringifying and concatenating stringified Array values into string during schema flattening. (default = ,) |
 
 `topics` and `topics.regex` parameters are mutually exclusive. Either Kafka `topics` names to subscribe to
 are provided explicitly, or a regular expression `topics.regex` is applied to all available Kafka topics
@@ -454,35 +458,44 @@ you want the sink connector to write same data objects into different tables of 
 You can also use the optional `dest_table_override` parameter to manually specify a table name not
 generated from the Kafka schema. When `topics` parameter has a comma-separated list of topic names,
 `dest_table_override` should either be a comma-separated list of the same length or be left blank.
-When topics are defined by `topics.regex` expression, `dest_table_override` parameter is not applicable.
+When topics are defined by `topics.regex` expression, configure `dest_table_override` parameter with
+a single string value or depend on SinkConnector to derive table name from message type.
 
-**Warning:** If `kinetica.single_table_per_topic` is set to false, there would be multiple Kinetica tables 
-created for a single topic. Connector determines the name of the destination table based on the schema 
+You can enable schema flattening mode on source schema by setting `kinetica.flatten_source.enabled`
+flag to true choosing the actual mode in `kinetica.flatten_source.array_flattening_mode` parameter
+(default value CONVERT_TO_STRING). When the flattening is done by conversion to string, the array
+values are stringified and concatenated with `kinetica.flatten_source.array_element_separator`
+symbol, such as `,` or `|` (default is `,`). All nested fields' names are converted to Kinetica
+column name by joining names as `parent_name.child_name`, and the joining symbol can be configured in
+`kinetica.flatten_source.field_name_delimiter` parameter.
+
+**Warning:** If `kinetica.single_table_per_topic` is set to false, there would be multiple Kinetica tables
+created for a single topic. Connector determines the name of the destination table based on the schema
 attached to the message.
 
 **Warning:** If `kinetica.single_table_per_topic` is set to true, a single table with topic
 name is created and all the incoming data would be formatted to fit its structure and column types.
 
-**Note** You can find more on schema evolution rules in [Apache Avro specification][AVRO_SCHEMA_EVOLUTION] 
-and in [Kafka Schema Evolution][KAFKA_SCHEMA_EVOLUTION] site section. 
+**Note** You can find more on schema evolution rules in [Apache Avro specification][AVRO_SCHEMA_EVOLUTION]
+and in [Kafka Schema Evolution][KAFKA_SCHEMA_EVOLUTION] site section.
 
-**Warning:** If `kinetica.allow_schema_evolution` is set to `true`, Connector would attempt to lookup 
-schema versions of the message object through Schema Registry. Additional parameters 
+**Warning:** If `kinetica.allow_schema_evolution` is set to `true`, Connector would attempt to lookup
+schema versions of the message object through Schema Registry. Additional parameters
 `kinetica.add_new_fields_as_columns` and `kinetica.make_missing_field_nullable` allow to
-modify Kinetica table on the fly upon receiving Kafka message with new or missing fields. 
-Default values for `kinetica.allow_schema_evolution`, `kinetica.add_new_fields_as_columns` 
-and `kinetica.make_missing_field_nullable` are set to `false`, because mapping schemas and 
-altering tables are expensive time-consuming operations, these options should be used 
-when absolutely necessary. This set of parameters was added to support Avro Schema Evolution 
-and connecting to Schema Registry. If `kinetica.allow_schema_evolution` is set to `false`, the 
+modify Kinetica table on the fly upon receiving Kafka message with new or missing fields.
+Default values for `kinetica.allow_schema_evolution`, `kinetica.add_new_fields_as_columns`
+and `kinetica.make_missing_field_nullable` are set to `false`, because mapping schemas and
+altering tables are expensive time-consuming operations, these options should be used
+when absolutely necessary. This set of parameters was added to support Avro Schema Evolution
+and connecting to Schema Registry. If `kinetica.allow_schema_evolution` is set to `false`, the
 Connector assumes object format is not going to change over time and would not attempt to map
 field names and types of incoming data to cached schema even if Schema Registry service is available.
 Every schema version other that the version available at the time Connector was subscribed to topic
 would be blacklisted and data in that format ignored.
 
-If you intend to use Kafka Schema Registry (with or without a possibility of Schema Evolution), please 
-configure the following parameters in your `connect-standalone.properties` file. Schema registry service is 
-usually set up on the same server as bootstrap-server, port 8081. 
+If you intend to use Kafka Schema Registry (with or without a possibility of Schema Evolution), please
+configure the following parameters in your `connect-standalone.properties` file. Schema registry service is
+usually set up on the same server as bootstrap-server, port 8081.
 
 ```
 key.converter=io.confluent.connect.avro.AvroConverter
@@ -523,8 +536,8 @@ and error-logging options:
 | `errors.deadletterqueue.topic.replication.factor`| N | replication factor used to create the dead letter queue topic when it doesn't already exist | 1, …, Short.MAX_VALUE; (default 3) |
 | `errors.deadletterqueue.context.headers.enable`| N | if true, multiple headers will be added to annotate the record with the error context | true/false; (default false) |
 
-These options are added to connector configuration files `quickstart-kinetica-sink.properties` and 
-`quickstart-kinetica-source.properties`. 
+These options are added to connector configuration files `quickstart-kinetica-sink.properties` and
+`quickstart-kinetica-source.properties`.
 The `errors.deadletterqueue` family of options are valid for sink connectors only.
 
 
@@ -542,7 +555,7 @@ usage: TestDataPump [options] [URL]
  -t,--total-batches <count>  Number of batches to insert.
 ```
 
-The below example (built for kafka 2.0.0 amd kinetica 7.0.0.0) runs the datapump with default options on a local 
+The below example (built for kafka 2.0.0 amd kinetica 7.0.0.0) runs the datapump with default options on a local
 Kinetica instance (not password-protected) and will insert batches of 10 records every 3 seconds.
 
 ```sh
@@ -566,9 +579,10 @@ production deployment.
 
 [DIST_MODE]: <https://docs.confluent.io/current/connect/managing.html#configuring-connectors>
 
-In the `{KAFKA_HOME}/config` folder create configuration files `connect-standalone-sink.properties` 
-and `connect-standalone-source.properties` based on example below. 
+In the `{KAFKA_HOME}/config` folder create configuration files `connect-standalone-sink.properties`
+and `connect-standalone-source.properties` based on example below.
 Make sure rest.port for sink and source files is set to different values.
+This example may require modifications (editing IP addresses, ports, local paths) to fit your environment.
 
 ```
 # This should point to your Kafka broker
@@ -662,7 +676,7 @@ $ bin/connect-standalone.sh config/connect-standalone-source.properties config/s
 * Verify that data is copied to tables `out_KafkaConnectorTest` and `out_KafkaConnectorTest2`.
 
 
-To test schemaless JSON format, in `connect-standalone-*.properties` config files set 
+To test schemaless JSON format, in `connect-standalone-*.properties` config files set
 
 ```
 key.converter.schemas.enable=false

@@ -53,6 +53,7 @@ public class KineticaSinkConnectorConfigTest {
     public void validateOverrideTest1() {
         Map<String, String> props = TestConnector.configureConnection(sinkConfig);
         props.put(SinkTask.TOPICS_CONFIG, "topic");
+        props.put(KineticaSinkConnectorConfig.PARAM_SINGLE_TABLE_PER_TOPIC, "true");
         props.put(KineticaSinkConnectorConfig.PARAM_DEST_TABLE_OVERRIDE, "tab1,tab2,tab3");
         
         KineticaSinkConnectorConfig config = new KineticaSinkConnectorConfig(KineticaSinkConnectorConfig.config, props);
@@ -63,6 +64,7 @@ public class KineticaSinkConnectorConfigTest {
     public void validateOverrideTest2() {
         Map<String, String> props = TestConnector.configureConnection(sinkConfig);
         props.put(SinkTask.TOPICS_CONFIG, "topic1,topic2, topic3");
+        props.put(KineticaSinkConnectorConfig.PARAM_SINGLE_TABLE_PER_TOPIC, "true");
         props.put(KineticaSinkConnectorConfig.PARAM_DEST_TABLE_OVERRIDE, "tab1,tab2,tab3");
         
         KineticaSinkConnectorConfig config = new KineticaSinkConnectorConfig(KineticaSinkConnectorConfig.config, props);
@@ -73,6 +75,7 @@ public class KineticaSinkConnectorConfigTest {
     public void validateOverrideTest3() {
         Map<String, String> props = TestConnector.configureConnection(sinkConfig);
         props.put(SinkTask.TOPICS_CONFIG, "topic");
+        props.put(KineticaSinkConnectorConfig.PARAM_SINGLE_TABLE_PER_TOPIC, "true");
         props.put(KineticaSinkConnectorConfig.PARAM_DEST_TABLE_OVERRIDE, "");
         
         KineticaSinkConnectorConfig config = new KineticaSinkConnectorConfig(KineticaSinkConnectorConfig.config, props);

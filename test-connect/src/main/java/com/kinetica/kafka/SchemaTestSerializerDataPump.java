@@ -2,6 +2,7 @@ package com.kinetica.kafka;
 
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Properties;
 import java.util.Random;
@@ -172,6 +173,70 @@ public class SchemaTestSerializerDataPump {
         }
         return records;
     }
+
+    /**
+     * Produces a given number of Kafka messages with embedded schema for the given schema type,
+     * mocking stock ticker values  
+     * @param topic          topic name
+     * @param count          number of records to generate
+     * @return
+     */
+    public static List<SinkRecord> mockNestedValues(String topic, String schemaName, int count) {
+        List<SinkRecord> records = new ArrayList<SinkRecord>();
+        org.apache.kafka.connect.data.Schema schema;
+        if (schemaName.equals("es_geoip1")) {
+        	schema = SchemaRegistryUtils.KAFKA_ES_GEO1_NESTED_SCHEMA;
+        } else if (schemaName.equals("es_geoip2")){
+        	schema = SchemaRegistryUtils.KAFKA_ES_GEO2_NESTED_SCHEMA;
+        } else if (schemaName.equals("case1")){
+        	schema = SchemaRegistryUtils.KAFKA_CASE1_SCHEMA;
+        } else if (schemaName.equals("case2")){
+        	schema = SchemaRegistryUtils.KAFKA_CASE2_SCHEMA;
+        } else {
+        	schema = SchemaRegistryUtils.KAFKA_TICKER_SCHEMA;
+        }
+        
+        // create serialized object with embedded versioned schema
+        for (int i=0; i<count; i++) {
+            Struct value;
+            if (schemaName.equals("es_geoip1")) {
+            	value = KafkaSchemaHelpers.populateES_GEO1_Record(i);
+            } else if (schemaName.equals("es_geoip2")){
+            	value = KafkaSchemaHelpers.populateES_GEO2_Record(i);
+            } else if (schemaName.equals("case1")){
+            	value = KafkaSchemaHelpers.populateCase1Record();
+            } else if (schemaName.equals("case2")){
+            	value = KafkaSchemaHelpers.populateCase2Record();
+            } else {
+            	value = null;
+            }
+            
+            SinkRecord record = new SinkRecord(topic, i, null, i, schema, value, new Date().getTime());
+            records.add(record);
+        }
+        return records;
+    }
+
+    /**
+     * Produces 
+     * a given number of Kafka messages with embedded schema for the given schema type,
+     * mocking stock ticker values  
+     * @param topic          topic name
+     * @param count          number of records to generate
+     * @return
+     */
+    public static List<SinkRecord> hashMockNestedValues(org.apache.kafka.connect.data.Schema schema, String topic, int count) {
+        List<SinkRecord> records = new ArrayList<SinkRecord>();
+        // create serialized object with embedded versioned schema
+        for (int i=0; i<count; i++) {
+            HashMap<String, Object> value = KafkaSchemaHelpers.populateNestedTypeRecordWithHashMap(schema, i);
+            SinkRecord record = new SinkRecord(topic, i, null, i, 
+            		null, value, new Date().getTime());
+            records.add(record);
+        }
+        return records;
+    }
+    
     /**
      * Primitive arg parser
      * @param args
