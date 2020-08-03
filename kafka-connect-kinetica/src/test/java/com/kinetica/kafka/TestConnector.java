@@ -11,6 +11,7 @@ import java.util.Properties;
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.sink.SinkRecord;
 import org.apache.kafka.connect.source.SourceRecord;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -47,7 +48,7 @@ import com.kinetica.kafka.TweetRecord;
  * @author Chad Juliano
  */
 public class TestConnector {
-
+    private GPUdb gpudb;
     private final static Logger LOG = LoggerFactory.getLogger(TestConnector.class);
     private static final long NUM_RECS = 10;
 
@@ -58,6 +59,14 @@ public class TestConnector {
     public void setup() throws Exception {
         this.sourceConfig = getConfig("config/quickstart-kinetica-source.properties");
         this.sinkConfig = getConfig("config/quickstart-kinetica-sink.properties");
+        this.gpudb = TestUtils.getGPUdb();
+    }
+    
+    @After
+    public void cleanup() throws Exception {
+    	//TestUtils.tableCleanUp(this.gpudb, "TEST.outKafkaConnectorTest");
+    	TestUtils.tableCleanUp(this.gpudb, "TEST.outoutKafkaConnectorTest");
+    	this.gpudb = null;
     }
 
     /**
@@ -101,6 +110,7 @@ public class TestConnector {
             sinkTask.stop();
 
             LOG.info("Test Complete!");
+            
         } catch (Exception ex) {
             LOG.error("Test failed", ex);
             throw ex;
@@ -114,16 +124,11 @@ public class TestConnector {
      * @throws Exception
      */
     public void createSourceTable() throws Exception {
+        final String COLLECTION_NAME = "TEST";
 
         try {
             String gpudbURL = this.sourceConfig.get(KineticaSourceConnectorConfig.PARAM_URL);
             String tableName = sourceConfig.get(KineticaSourceConnectorConfig.PARAM_TABLE_NAMES);
-            String COLLECTION_NAME = sinkConfig.get(KineticaSinkConnectorConfig.PARAM_COLLECTION);
-            
-            GPUdb gpudb = new GPUdb(gpudbURL, new GPUdb.Options()
-                    .setUsername(sourceConfig.get(KineticaSourceConnectorConfig.PARAM_USERNAME))
-                    .setPassword(sourceConfig.get(KineticaSourceConnectorConfig.PARAM_PASSWORD))
-                    .setTimeout(0));
 
             if (gpudb.hasTable(tableName, null).getTableExists()) {
                 LOG.info("Dropping table: {}", tableName);

@@ -27,7 +27,7 @@ public class KineticaSinkConnectorTest {
         
         Map<String, String> cfg = TestConnector.configureConnection(
                 TestConnector.getConfig("config/quickstart-kinetica-sink.properties"));
-        cfg.put(KineticaSinkConnectorConfig.PARAM_COLLECTION, "");
+        cfg.put(KineticaSinkConnectorConfig.DEPRECATED_PARAM_COLLECTION, "");
 
         connProps = new HashMap<>(cfg);
     }

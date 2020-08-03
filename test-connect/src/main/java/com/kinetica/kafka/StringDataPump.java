@@ -34,23 +34,23 @@ public class StringDataPump {
     private static String topic = "Apple";
     private static int batchSize = 10;
     private static int count = 10;
-    
+
     static Schema appleSchema = new Schema.Parser().parse(Apple.getSchema());
 
     /**
      * This DataPumnp publishes JSON no-schema messages to the provided kafka topic, record key is null.
      * Topic name and Kafka bootstrap server URL (such as http://localhost:9092) should be provided.
-     * 
+     *
      * To consume these JSON messages, configure connect-standalone.properties:
      * key.converter=org.apache.kafka.connect.storage.StringConverter
      * value.converter=org.apache.kafka.connect.json.JsonConverter
      * key.converter.schemas.enable=false
      * value.converter.schemas.enable=false
-     * 
+     *
      * and quickstart-kinetica-sink.properties:
      * topics = <your_topic_name>
-     * kinetica.create_table = true
-     * 
+     * kinetica.tables.create_table = true
+     *
      * @param topic       Kafka topic name to be created
      * @param key         Kafka message key (null or tablename)
      * @throws Exception
@@ -63,9 +63,9 @@ public class StringDataPump {
         props.put("serializer.class", "kafka.serializer.StringEncoder");
         props.put("key.serializer", "org.apache.kafka.common.serialization.StringSerializer");
         props.put("value.serializer", "org.apache.kafka.connect.json.JsonSerializer");
-        
+
         ObjectMapper objectMapper = new ObjectMapper();
-        
+
         KafkaProducer<String, JsonNode> messageProducer = new KafkaProducer<String, JsonNode>(props);
         ProducerRecord<String, JsonNode> producerRecord;
         JsonNode jsonNode;
@@ -75,10 +75,10 @@ public class StringDataPump {
                 jsonNode = objectMapper.valueToTree(Apple.generateApple(i*StringDataPump.batchSize + j));
                 System.out.println(jsonNode);
                 producerRecord = new ProducerRecord<String, JsonNode>(topic, key, jsonNode);
-                
+
                 messageProducer.send(producerRecord);
                 System.out.println(producerRecord);
-                
+
             }
         }
         messageProducer.close();
@@ -91,7 +91,7 @@ public class StringDataPump {
         StringDataPump.count = count;
         ProduceJSONMessages(topic, key);
     }
-    
+
     public static List<SinkRecord> getSinkRecordJSONMessages(String topic) throws Exception
     {
         // Start KAFKA consumer
@@ -100,21 +100,21 @@ public class StringDataPump {
         props.put("group.id", "KafkaExampleConsumer");
         props.put("key.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
         props.put("value.deserializer", "org.apache.kafka.connect.json.JsonDeserializer");
-        
+
         KafkaConsumer<String, JsonNode> messageConsumer = new KafkaConsumer<String, JsonNode>(props);
         messageConsumer.subscribe(Collections.singletonList(topic));
-        
+
         ConsumerRecords<String, JsonNode> records = messageConsumer.poll(1000);
         messageConsumer.close();
-        
+
         List<SinkRecord> sinkRecords = new ArrayList<SinkRecord>();
-        
+
         ObjectMapper objectMapper = new ObjectMapper();
-        
+
         for (ConsumerRecord<String, JsonNode> entry : records.records(topic)) {
-            Map<String, Object> result = objectMapper.convertValue(entry.value(), HashMap.class);            
+            Map<String, Object> result = objectMapper.convertValue(entry.value(), HashMap.class);
             sinkRecords.add(new SinkRecord(entry.topic(), entry.partition(), null, entry.key(), null, result, entry.timestamp()));
-            
+
         }
 
         return sinkRecords;
@@ -122,9 +122,9 @@ public class StringDataPump {
 
     public static List<SinkRecord> mockSinkRecordJSONMessages(String topic, String key) {
         List<SinkRecord> sinkRecords = new ArrayList<SinkRecord>();
-        
+
         Map<String, Object> data;
-        
+
         for (int i=0; i<JsonDataPump.count; i++) {
             for (int j=0; j<JsonDataPump.batchSize; j++){
                 data = KafkaSchemaHelpers.populateConsumerRecord("Apple");
@@ -132,8 +132,8 @@ public class StringDataPump {
             }
         }
         return sinkRecords;
-    }    
-    
+    }
+
     /**
      * Primitive arg parser
      * @param args
@@ -166,7 +166,7 @@ public class StringDataPump {
                 .type(PatternOptionBuilder.NUMBER_VALUE)
                 .build();
         options.addOption(option);
-        
+
         option = Option.builder("t")
                 .longOpt("topic")
                 .desc("Topic name")
@@ -209,14 +209,14 @@ public class StringDataPump {
         System.out.println(String.format("URL: %s", StringDataPump.bootstrapUrl));
 
     }
-    
+
     /**
      * Integration test helper class:
      * Data pump creating Kafka topic and autogenerating messages for it
      * This topic has schemaless JSON (not OGG standard) messages generated, null key.
      * It was created to match default command-line Kafka message producer from Kafka documentation
      * During integration testing a properly configured KineticaSinkConnector is supposed to consume all messages into single table.
-     *  
+     *
      * @param args     a list of command line arguments followed by Kafka Bootstrap URL (localhost:9092)
      */
     public static void main(String[] args) throws Exception{
@@ -227,10 +227,10 @@ public class StringDataPump {
             System.out.println("PARAM ERROR: " + ex.getMessage());
             System.exit(1);
         }
-    
+
         System.out.println("Producing schemaless JSON messages");
         ProduceJSONMessages(StringDataPump.topic, null);
     }
-    
+
 
 }

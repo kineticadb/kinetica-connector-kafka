@@ -28,8 +28,8 @@ public class TestDataPump {
     private static Map<String,String> config;
     
     private static String COLLECTION_NAME = "TEST";
-    private static String TWEET_SOURCE_TABLE = "KafkaConnectorTest";
-    private static String TWEET_SOURCE_TABLE2 = "KafkaConnectorTest2";
+    private static String TWEET_SOURCE_TABLE = COLLECTION_NAME + "." + "KafkaConnectorTest";
+    private static String TWEET_SOURCE_TABLE2 = COLLECTION_NAME + "." + "KafkaConnectorTest2";
 
     // command line params
     private static String gpudbUrl = null;

@@ -24,7 +24,7 @@ The two connector classes that integrate **Kinetica** with **Kafka** are:
 * [Confluent Kafka Connect][KAFKA]
 
 [REPOSITORY]: <https://github.com/kineticadb/kinetica-connector-kafka>
-[MANUAL]: <https://www.kinetica.com/docs/connectors/kafka_guide.html>
+[MANUAL]: <https://www.kinetica.com/docs/7.1/connectors/kafka_guide.html>
 [KAFKA]: <https://docs.confluent.io/current/connect/index.html>
 [AVRO_SCHEMA_EVOLUTION]: <https://avro.apache.org/docs/1.8.1/spec.html>
 [KAFKA_SCHEMA_EVOLUTION]: <https://docs.confluent.io/current/schema-registry/docs/avro.html>
@@ -37,7 +37,7 @@ running Kinetica Kafka connectors in standalone mode or to a cluster.
 
 Kinetica Kafka connector has a property parameter in the `pom.xml` properties to set **Kafka** version.
 Connector build process would add **Kafka** version to the jar name for easy reference:
-`kafka-2.0.0-connector-kinetica-7.0.x.y-jar-with-dependencies.jar`.
+`kafka-2.0.0-connector-kinetica-7.1.x.y-jar-with-dependencies.jar`.
 Connector code is Java 7 compatible and does not require a separate build to support Java 8 environment.
 
 **Kafka Connect** allows you to configure the Kinetica Kafka Connector exactly the same for
@@ -54,7 +54,7 @@ version, edit `pom.xml` project properties to build connector compatible with yo
 | 4.1.x | 1.1.x | 1.7.0_60, 1.8.0_60 |
 | 5.0.x | 2.0.x | 1.8.0_60 |
 | 5.1.x | 2.1.x | 1.8.0_60 |
-| 5.4.1 | 2.4.1 | 1.8.0_60 |
+| 5.2.x | 2.2.x | 1.8.0_60 |
 
 Clone and build the project as follows:
 
@@ -407,8 +407,8 @@ kinetica.topic_prefix = <TargetKafkaTopicNamesPrefix>
 The `KineticaSinkConnector` can be used as-is by **Kafka Connect** to stream data from Kafka into
 Kinetica. Streamed data must be in a flat **Kafka Connect** `Struct` that uses only supported data
 types for fields (`BYTES`, `FLOAT64`, `FLOAT32`, `INT32`, `INT64`, and `STRING`). No transformation
-is performed on the data and it is streamed directly into a table. The target table and collection
-will be created if they do not exist.
+is performed on the data and it is streamed directly into a table. The target table and schema
+will be created if they don't exist and user has sufficient privileges.
 
 **Warning:** If the target table does not exist, the connector will create it based on the information
 available in the Kafka schema. This information is missing gpudb column attributes like
@@ -430,22 +430,18 @@ that accepts the following parameters:
 | `kinetica.url`| Y | The URL of the Kinetica database server (i.e. http://127.0.0.1:9191) |
 | `kinetica.username`| N | Username for authentication |
 | `kinetica.password`| N | Password for authentication |
-| `kinetica.table_prefix`| N | Prefix for destination tables (see below) |
-| `kinetica.dest_table_override`| N | Override for table name. (see below) |
-| `kinetica.collection_name`| Y | Collection to put the table in (default is empty) |
-| `kinetica.batch_size`| N | The number of records to insert at one time (default = 10000) |
 | `kinetica.timeout`| N | Timeout in milliseconds (default = 1000) |
-| `kinetica.create_table`| N | Automatically create missing table. (default = true) |
-| `kinetica.update_on_existing_pk`| N | Allow UPSERT of data into Kinetica table on existing PK. (default = true) |
-| `kinetica.allow_schema_evolution`| N | Allow schema evolution support for Kafka messages (requires Schema Registry running in Kafka stack). (default = false) |
-| `kinetica.single_table_per_topic`| N | When true, connector attempts to put all incoming messages into a single table. Otherwise creates a table for each individual message type.  (default = false) |
-| `kinetica.add_new_fields_as_columns`| N | When schema evolution is supported and Kafka message has a new field, connector attempts to insert a column for it into Kinetica table. (default = false) |
-| `kinetica.make_missing_field_nullable`| N | When schema evolution is supported and Kafka message does not have a required field, connector attempts to alter corresponding table column, making it nullable. (default = false) |
 | `kinetica.retry_count`| N | Number of attempts to insert data before task fails. (default = 1) |
-| `kinetica.flatten_source.enabled`| N | When true, connector attempts to flatten nested schema for incoming messages. (default = false) |
-| `kinetica.flatten_source.field_name_delimiter` | N | Symbol to be used when concatenating nested schema field names into Kinetica column name. (default '_') |
-| `kinetica.flatten_source.array_flattening_mode` | N | Different modes to convert ARRAY values into single column. (default CONVERT_TO_STRING) |
-| `kinetica.flatten_source.array_element_separator` | N | Custom value separator used when stringifying and concatenating stringified Array values into string during schema flattening. (default = ,) |
+| `kinetica.batch_size`| N | The number of records to insert at one time (default = 10000) |
+| `kinetica.tables.create_table`| N | Automatically create missing table. (default = true) |
+| `kinetica.tables.prefix`| N | Prefix for destination tables (see below) |
+| `kinetica.tables.schema_name`| Y | Kinetica schema to put the table in (default table schema would be used at runtime if empty) |
+| `kinetica.tables.destination_name`| N | Override for table name. (see below) |
+| `kinetica.tables.single_table_per_topic`| N | When true, connector attempts to put all incoming messages into a single table. Otherwise creates a table for each individual message type.  (default = false) |
+| `kinetica.tables.update_on_existing_pk`| N | Allow UPSERT of data into Kinetica table on existing PK. (default = true) |
+| `kinetica.schema_evolution.enabled`| N | Allow schema evolution support for Kafka messages (requires Schema Registry running in Kafka stack). (default = false) |
+| `kinetica.schema_evolution.add_new_fields_as_columns`| N | When schema evolution is supported and Kafka message has a new field, connector attempts to insert a column for it into Kinetica table. (default = false) |
+| `kinetica.schema_evolution.make_missing_field_nullable`| N | When schema evolution is supported and Kafka message does not have a required field, connector attempts to alter corresponding table column, making it nullable. (default = false) |
 
 `topics` and `topics.regex` parameters are mutually exclusive. Either Kafka `topics` names to subscribe to
 are provided explicitly, or a regular expression `topics.regex` is applied to all available Kafka topics
@@ -458,36 +454,40 @@ you want the sink connector to write same data objects into different tables of 
 You can also use the optional `dest_table_override` parameter to manually specify a table name not
 generated from the Kafka schema. When `topics` parameter has a comma-separated list of topic names,
 `dest_table_override` should either be a comma-separated list of the same length or be left blank.
-When topics are defined by `topics.regex` expression, configure `dest_table_override` parameter with
-a single string value or depend on SinkConnector to derive table name from message type.
+When topics are defined by `topics.regex` expression, `dest_table_override` parameter is not applicable.
 
-You can enable schema flattening mode on source schema by setting `kinetica.flatten_source.enabled`
-flag to true choosing the actual mode in `kinetica.flatten_source.array_flattening_mode` parameter
-(default value CONVERT_TO_STRING). When the flattening is done by conversion to string, the array
-values are stringified and concatenated with `kinetica.flatten_source.array_element_separator`
-symbol, such as `,` or `|` (default is `,`). All nested fields' names are converted to Kinetica
-column name by joining names as `parent_name.child_name`, and the joining symbol can be configured in
-`kinetica.flatten_source.field_name_delimiter` parameter.
+**Warning:** The following parameters from version 7.0 got deprecated and renamed in version 7.1:
 
-**Warning:** If `kinetica.single_table_per_topic` is set to false, there would be multiple Kinetica tables
+| Deprecated Parameter | Current Parameter |
+| `kinetica.create_table` | `kinetica.tables.create_table`|
+| `kinetica.table_prefix` | `kinetica.tables.prefix`|
+| `kinetica.collection_name` | `kinetica.tables.schema_name`|
+| `kinetica.dest_table_override` | `kinetica.tables.destination_name`|
+| `kinetica.single_table_per_topic` | `kinetica.tables.single_table_per_topic`|
+| `kinetica.update_on_existing_pk` | `kinetica.tables.update_on_existing_pk`|
+| `kinetica.allow_schema_evolution` | `kinetica.schema_evolution.enabled`|
+| `kinetica.add_new_fields_as_columns` | `kinetica.schema_evolution.add_new_fields_as_columns`|
+| `kinetica.make_missing_field_nullable` | `kinetica.schema_evolution.make_missing_field_nullable`|
+
+**Warning:** If `kinetica.tables.single_table_per_topic` is set to false, there would be multiple Kinetica tables
 created for a single topic. Connector determines the name of the destination table based on the schema
 attached to the message.
 
-**Warning:** If `kinetica.single_table_per_topic` is set to true, a single table with topic
+**Warning:** If `kinetica.tables.single_table_per_topic` is set to true, a single table with topic
 name is created and all the incoming data would be formatted to fit its structure and column types.
 
 **Note** You can find more on schema evolution rules in [Apache Avro specification][AVRO_SCHEMA_EVOLUTION]
 and in [Kafka Schema Evolution][KAFKA_SCHEMA_EVOLUTION] site section.
 
-**Warning:** If `kinetica.allow_schema_evolution` is set to `true`, Connector would attempt to lookup
+**Warning:** If `kinetica.schema_evolution.enabled` is set to `true`, Connector would attempt to lookup
 schema versions of the message object through Schema Registry. Additional parameters
-`kinetica.add_new_fields_as_columns` and `kinetica.make_missing_field_nullable` allow to
+`kinetica.schema_evolution.add_new_fields_as_columns` and `kinetica.schema_evolution.make_missing_field_nullable` allow to
 modify Kinetica table on the fly upon receiving Kafka message with new or missing fields.
-Default values for `kinetica.allow_schema_evolution`, `kinetica.add_new_fields_as_columns`
-and `kinetica.make_missing_field_nullable` are set to `false`, because mapping schemas and
+Default values for `kinetica.schema_evolution.enabled`, `kinetica.schema_evolution.add_new_fields_as_columns`
+and `kinetica.schema_evolution.make_missing_field_nullable` are set to `false`, because mapping schemas and
 altering tables are expensive time-consuming operations, these options should be used
 when absolutely necessary. This set of parameters was added to support Avro Schema Evolution
-and connecting to Schema Registry. If `kinetica.allow_schema_evolution` is set to `false`, the
+and connecting to Schema Registry. If `kinetica.schema_evolution.enabled` is set to `false`, the
 Connector assumes object format is not going to change over time and would not attempt to map
 field names and types of incoming data to cached schema even if Schema Registry service is available.
 Every schema version other that the version available at the time Connector was subscribed to topic
@@ -516,7 +516,7 @@ topics = <TopicPrefix><SourceTableName>
 kinetica.url = <KineticaServiceURL>
 kinetica.username = <KineticaAuthenticatingUserName>
 kinetica.password = <KineticaAuthenticatingUserPassword>
-kinetica.collection_name = <TargetKineticaCollectionName>
+kinetica.tables.schema_name = <TargetKineticaSchemaName>
 kinetica.timeout = <KineticaConnectionTimeoutInSeconds>
 ```
 
@@ -555,18 +555,18 @@ usage: TestDataPump [options] [URL]
  -t,--total-batches <count>  Number of batches to insert.
 ```
 
-The below example (built for kafka 2.0.0 amd kinetica 7.0.0.0) runs the datapump with default options on a local
+The below example (built for kafka 2.0.0 amd kinetica 7.1.0.0) runs the datapump with default options on a local
 Kinetica instance (not password-protected) and will insert batches of 10 records every 3 seconds.
 
 ```sh
-java -cp kafka-2.0.0-connector-kinetica-7.0.0.0-tests.jar:kafka-2.0.0-connector-kinetica-7.0.0.0-jar-with-dependencies.jar \
+java -cp kafka-2.0.0-connector-kinetica-7.1.0.0-tests.jar:kafka-2.0.0-connector-kinetica-7.1.0.0-jar-with-dependencies.jar \
     com.kinetica.kafka.TestDataPump http://localhost:9191
 ```
 
 You can also provide a relative path to Kinetica DB instance configuration file that contains URL, username, password and timeout:
 
 ```sh
-java -cp kafka-2.0.0-connector-kinetica-7.0.0.0-tests.jar:kafka-2.0.0-connector-kinetica-7.0.0.0-jar-with-dependencies.jar \
+java -cp kafka-2.0.0-connector-kinetica-7.1.0.0-tests.jar:kafka-2.0.0-connector-kinetica-7.1.0.0-jar-with-dependencies.jar \
     com.kinetica.kafka.TestDataPump -c config/quickstart-kinetica-sink.properties
 ```
 
@@ -637,8 +637,8 @@ tasks.max = 1
 
 # Kinetica specific config
 kinetica.url = http://localhost:9191
-kinetica.collection_name = TEST
-kinetica.table_prefix = out_
+kinetica.tables.schema_name = TEST
+kinetica.tables.prefix = out_
 kinetica.timeout = 1000
 kinetica.batch_size = 100
 ```
@@ -657,7 +657,7 @@ $ bin/kafka-server-start.sh config/server.properties
 tables and generate insert activity.
 
 ```sh
-$ java -cp kafka-2.0.0-connector-kinetica-7.0.0.0-tests.jar:kafka-2.0.0-connector-kinetica-7.0.0.0-jar-with-dependencies.jar \
+$ java -cp kafka-2.0.0-connector-kinetica-7.1.0.0-tests.jar:kafka-2.0.0-connector-kinetica-7.1.0.0-jar-with-dependencies.jar \
     com.kinetica.kafka.tests.TestDataPump -c <path/to/sink.properties>
 ```
 

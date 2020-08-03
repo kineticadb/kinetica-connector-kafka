@@ -51,7 +51,9 @@ public class JsonDataPumpSinkTest {
     		tableNames.add(PREFIX + fruit);
     		tableNames.add(fruit + NULL_SUFFIX);
     	}
-    	ConnectorConfigHelper.tableCleanUp(this.gpudb, tableNames.toArray(new String[tableNames.size()]));
+    	ConnectorConfigHelper.tableCleanUp(
+            this.gpudb, 
+            ConnectorConfigHelper.addCollection(tableNames.toArray(new String[tableNames.size()]), COLLECTION));
         this.gpudb = null;
     }
         
@@ -63,7 +65,7 @@ public class JsonDataPumpSinkTest {
         Map<String, String> config = ConnectorConfigHelper.getParameterizedConfig(TOPIC, COLLECTION, "", "", true, false);
         
         // Cleanup, configure and start connector and sinktask
-        ConnectorConfigHelper.tableCleanUp(this.gpudb, KafkaSchemaHelpers.FRUITS);
+        ConnectorConfigHelper.tableCleanUp(this.gpudb, ConnectorConfigHelper.addCollection(KafkaSchemaHelpers.FRUITS, COLLECTION));
         KineticaSinkConnector connector = ConnectorConfigHelper.startConnector(config);
         KineticaSinkTask task = startSinkTask(connector); 
         
@@ -72,7 +74,7 @@ public class JsonDataPumpSinkTest {
         Thread.sleep(1000);
         
         // expect Kinetica tables to exist and be populated
-        for (String tableName : KafkaSchemaHelpers.FRUITS) {
+        for (String tableName : ConnectorConfigHelper.addCollection(KafkaSchemaHelpers.FRUITS, COLLECTION)) {
             boolean tableExists = gpudb.hasTable(tableName, null).getTableExists(); 
             assertTrue(tableExists);
             
@@ -95,7 +97,7 @@ public class JsonDataPumpSinkTest {
 	    Map<String, String> config = ConnectorConfigHelper.getParameterizedConfig(topic, COLLECTION, "", "", true, false);
 	    
 	    // Cleanup, configure and start connector and sinktask
-	    ConnectorConfigHelper.tableCleanUp(this.gpudb, KafkaSchemaHelpers.FRUITS);
+	    ConnectorConfigHelper.tableCleanUp(this.gpudb, ConnectorConfigHelper.addCollection(KafkaSchemaHelpers.FRUITS, COLLECTION));
 	    KineticaSinkConnector connector = ConnectorConfigHelper.startConnector(config);
 	    KineticaSinkTask task = startSinkTask(connector); 
 	    
@@ -104,7 +106,7 @@ public class JsonDataPumpSinkTest {
 	    Thread.sleep(1000);
 	    
 	    // expect Kinetica tables to exist and be populated
-	    for (String fruit : KafkaSchemaHelpers.FRUITS) {
+	    for (String fruit : ConnectorConfigHelper.addCollection(KafkaSchemaHelpers.FRUITS, COLLECTION)) {
 	    	String tableName = fruit + NULL_SUFFIX;
 	        boolean tableExists = gpudb.hasTable(tableName, null).getTableExists(); 
 	        assertTrue(tableExists);
@@ -131,7 +133,7 @@ public class JsonDataPumpSinkTest {
             // Kinetica table cleanup before running data ingest
             tables[i] = PREFIX + KafkaSchemaHelpers.FRUITS[i];
         }
-        ConnectorConfigHelper.tableCleanUp(this.gpudb, tables);
+        ConnectorConfigHelper.tableCleanUp(this.gpudb, ConnectorConfigHelper.addCollection(tables, COLLECTION));
         KineticaSinkConnector connector = ConnectorConfigHelper.startConnector(config);
         KineticaSinkTask task = startSinkTask(connector); 
 
@@ -140,13 +142,13 @@ public class JsonDataPumpSinkTest {
         Thread.sleep(2000);
         
         // expect Kinetica tables to exist and be populated
-        for (String tableName : KafkaSchemaHelpers.FRUITS) {
-
-            boolean tableExists = gpudb.hasTable(PREFIX + tableName, null).getTableExists(); 
+        for (String fruit : KafkaSchemaHelpers.FRUITS) {
+            String tableName = ConnectorConfigHelper.addCollection(PREFIX + fruit, COLLECTION);
+            boolean tableExists = gpudb.hasTable(tableName, null).getTableExists(); 
             assertTrue(tableExists);
 
             // expect table size to match number of Kafka messages generated/ingested
-            int size = gpudb.showTable(PREFIX + tableName, tableSizeProps).getFullSizes().get(0).intValue();        
+            int size = gpudb.showTable(tableName, tableSizeProps).getFullSizes().get(0).intValue();        
             assertEquals(size, JsonDataPump.batchSize*JsonDataPump.count);
         }
         Thread.sleep(2000);
@@ -167,7 +169,7 @@ public class JsonDataPumpSinkTest {
             // Kinetica table cleanup before running data ingest
             tables[i] = AVRO_PREFIX + KafkaSchemaHelpers.FRUITS[i];
         }
-        ConnectorConfigHelper.tableCleanUp(this.gpudb, tables);
+        ConnectorConfigHelper.tableCleanUp(this.gpudb, ConnectorConfigHelper.addCollection(tables, COLLECTION));
         KineticaSinkConnector connector = ConnectorConfigHelper.startConnector(config);
         KineticaSinkTask task = startSinkTask(connector); 
 
@@ -176,12 +178,13 @@ public class JsonDataPumpSinkTest {
         Thread.sleep(1000);
         
         // expect Kinetica tables to exist and be populated
-        for (String tableName : KafkaSchemaHelpers.FRUITS) {
-            boolean tableExists = gpudb.hasTable(AVRO_PREFIX+tableName, null).getTableExists(); 
+        for (String fruit : KafkaSchemaHelpers.FRUITS) {
+            String tableName = ConnectorConfigHelper.addCollection(AVRO_PREFIX + fruit, COLLECTION);
+            boolean tableExists = gpudb.hasTable(tableName, null).getTableExists(); 
             assertTrue(tableExists);
             
             // expect table size to match number of Kafka messages generated/ingested
-            int size = gpudb.showTable(AVRO_PREFIX+tableName, tableSizeProps).getFullSizes().get(0).intValue();        
+            int size = gpudb.showTable(tableName, tableSizeProps).getFullSizes().get(0).intValue();        
             assertEquals(size, JsonDataPump.batchSize*JsonDataPump.count);
         }
         Thread.sleep(2000);

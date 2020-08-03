@@ -1,27 +1,33 @@
 # GPUdb Kafka Connector Changelog
 
+## Version 7.1
+
+### Version 7.1.0.0 -- 2020-05-27
+
+#### Changed
+-   Sink Connector configuration parameters names to allow grouping
+    by scope and relevance. Old parameter names are deprecated.
+    The following parameters were renamed:
+    `kinetica.create_table` into `kinetica.tables.create_table`,
+    `kinetica.table_prefix` into `kinetica.tables.prefix`,
+    `kinetica.collection_name` into `kinetica.tables.schema_name`,
+    `kinetica.dest_table_override` into `kinetica.tables.destination_name`,
+    `kinetica.single_table_per_topic` into `kinetica.tables.single_table_per_topic`,
+    `kinetica.update_on_existing_pk` into `kinetica.tables.update_on_existing_pk`,
+    `kinetica.allow_schema_evolution` into `kinetica.schema_evolution.enabled`,
+    `kinetica.add_new_fields_as_columns` into `kinetica.schema_evolution.add_new_fields_as_columns`,
+    `kinetica.make_missing_field_nullable` into `kinetica.schema_evolution.make_missing_field_nullable`.
+
+-   Referencing table by using [schema_name.]table_name format
+    to support Kinetica 7.1 table naming restrictions.
+    KineticaSourceConnector uses this naming format in
+    `kinetica.table_names` configuration parameter.
+    KineticaSinkConnector uses `kinetica.collection name`
+    for `schema_name` and other configuration parameters
+    to derive `table_name`.
+
+
 ## Version 7.0
-
-### Version 7.0.2.0 -- 2020-04-28
-
-#### Added
-
--   `kinetica.flatten_source.enabled` option to turn on
-    flattening of nested Avro JSON schema and support
-    Avro JSON MAP and ARRAY types ingest (default false).
--   `kinetica.flatten_source.field_name_delimiter` option
-    to be used when concatenating nested schema field names
-    into Kinetica column name (default '_').
--   `kinetica.flatten_source.array_flattening_mode` option
-    to define ARRAY schema type conversion to single column
-    (default CONVERT_TO_STRING).
--   `kinetica.flatten_source.array_element_separator`
-    option to configure value separator symbol (i.e. '|')
-    for concatenating stringified ARRAY values during
-    schema flattening (default ',').
-
-#### Updated
--   Kafka version support to 2.4.1 version.
 
 ### Version 7.0.1.3 -- 2019-05-07
 
@@ -104,4 +110,3 @@ for different Kafka message formats and data ingest scenarios
 ### Version 5.2.0 -- 2016-07-08
 
 -   Initial version
-

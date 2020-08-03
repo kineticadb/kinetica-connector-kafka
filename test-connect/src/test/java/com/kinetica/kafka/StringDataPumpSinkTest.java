@@ -43,11 +43,22 @@ public class StringDataPumpSinkTest {
         this.gpudb = ConnectorConfigHelper.getGPUdb();
         this.tableSizeProps = new HashMap<String, String>();
         this.tableSizeProps.put("get_sizes", "true");
-        ConnectorConfigHelper.tableCleanUp(this.gpudb, new String[] {TOPIC, PREFIX+TOPIC, TABLE, OGG_TOPIC, PREFIX+OGG_TOPIC, OGG_TABLE });
+        ConnectorConfigHelper.tableCleanUp(
+            this.gpudb, 
+            ConnectorConfigHelper.addCollection(
+                new String[] {TOPIC, PREFIX+TOPIC, TABLE, OGG_TOPIC, PREFIX+OGG_TOPIC, OGG_TABLE }, 
+                COLLECTION)
+        );
     }
     
     @After
     public void cleanup() throws GPUdbException {
+        ConnectorConfigHelper.tableCleanUp(
+                this.gpudb, 
+                ConnectorConfigHelper.addCollection(
+                    new String[] {TOPIC, PREFIX+TOPIC, TABLE, OGG_TOPIC, PREFIX+OGG_TOPIC, OGG_TABLE }, 
+                    COLLECTION)
+            );
         this.gpudb = null;
     }
         
@@ -67,7 +78,7 @@ public class StringDataPumpSinkTest {
         runSinkTask(task, TOPIC, null);
         
         // Expect tableName to match TOPIC name
-        assertEquals(tableName, TOPIC);
+        assertEquals(tableName, ConnectorConfigHelper.addCollection(TOPIC, COLLECTION));
         
         // expect Kinetica table to exist
         boolean tableExists = gpudb.hasTable(tableName, null).getTableExists(); 
@@ -97,7 +108,7 @@ public class StringDataPumpSinkTest {
         runSinkTask(task, TOPIC, null);
         
         // Expect tableName to match PREFIX+TOPIC name
-        assertEquals(tableName, PREFIX+TOPIC);
+        assertEquals(tableName, ConnectorConfigHelper.addCollection(PREFIX+TOPIC, COLLECTION));
         
         // expect Kinetica table to exist
         boolean tableExists = gpudb.hasTable(tableName, null).getTableExists(); 
@@ -129,7 +140,7 @@ public class StringDataPumpSinkTest {
         runSinkTask(task, TOPIC, null);
         
         // Expect tableName to match PREFIX+TOPIC name
-        assertEquals(tableName, TABLE);
+        assertEquals(tableName, ConnectorConfigHelper.addCollection(TABLE, COLLECTION));
         
         // expect Kinetica table to exist
         boolean tableExists = gpudb.hasTable(tableName, null).getTableExists(); 
@@ -159,7 +170,7 @@ public class StringDataPumpSinkTest {
         runSinkTask(task, OGG_TOPIC, OGG_TABLE);
         
         // Expect tableName to match OGG_TOPIC name
-        assertEquals(tableName, OGG_TOPIC);
+        assertEquals(tableName, ConnectorConfigHelper.addCollection(OGG_TOPIC, COLLECTION));
         
         // expect Kinetica table to exist
         boolean tableExists = gpudb.hasTable(tableName, null).getTableExists(); 
@@ -189,7 +200,7 @@ public class StringDataPumpSinkTest {
         runSinkTask(task, OGG_TOPIC, OGG_TABLE);
         
         // Expect tableName to match PREFIX+OGG_TOPIC name
-        assertEquals(tableName, PREFIX+OGG_TOPIC);
+        assertEquals(tableName, ConnectorConfigHelper.addCollection(PREFIX+OGG_TOPIC, COLLECTION));
         
         // expect Kinetica table to exist
         boolean tableExists = gpudb.hasTable(tableName, null).getTableExists(); 
@@ -219,7 +230,7 @@ public class StringDataPumpSinkTest {
         runSinkTask(task, OGG_TOPIC, OGG_TABLE);
         
         // Expect tableName to match OGG_TABLE name
-        assertEquals(tableName, OGG_TABLE);
+        assertEquals(tableName, ConnectorConfigHelper.addCollection(OGG_TABLE, COLLECTION));
         
         // expect Kinetica table to exist
         boolean tableExists = gpudb.hasTable(tableName, null).getTableExists(); 

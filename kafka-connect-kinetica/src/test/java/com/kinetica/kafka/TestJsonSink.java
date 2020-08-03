@@ -12,11 +12,13 @@ import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.SchemaAndValue;
 import org.apache.kafka.connect.json.JsonConverter;
 import org.apache.kafka.connect.sink.SinkRecord;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.gpudb.GPUdb;
 import com.kinetica.kafka.KineticaSinkTask;
 
 /*
@@ -31,6 +33,14 @@ public class TestJsonSink {
     @Before
     public void setup() throws Exception {
         this.sinkConfig = TestConnector.getConfig("config/quickstart-kinetica-sink.properties");
+    }
+    
+    @After
+    public void cleanup() throws Exception {
+    	GPUdb gpudb = TestUtils.getGPUdb();
+    	TestUtils.tableCleanUp(gpudb, "outRX_TX_FIN_EVENT");
+    	TestUtils.tableCleanUp(gpudb, "outTX_TP_FIN_EVENT");
+    	gpudb = null;
     }
 
     @Test

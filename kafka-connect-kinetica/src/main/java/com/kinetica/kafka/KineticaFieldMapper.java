@@ -13,7 +13,6 @@ public class KineticaFieldMapper {
 	private Integer version;
 	private HashMap<String, Column> missing;
 	private HashMap<String, Column> mapped;
-	private HashMap<String, String> lookup;
 	
 	/**
 	 * Create a new blank KineticaFieldMapper instance
@@ -21,7 +20,6 @@ public class KineticaFieldMapper {
 	public KineticaFieldMapper() {
 		this.missing = new HashMap<String, Column>();
 		this.mapped = new HashMap<String, Column>();
-		this.lookup = new HashMap<String, String>();
 	}
 
 	/**
@@ -35,7 +33,6 @@ public class KineticaFieldMapper {
 		this.version = version;
 		this.missing = new HashMap<String, Column>();
 		this.mapped = new HashMap<String, Column>();
-		this.lookup = new HashMap<String, String>();
 	}
 	
 	/**
@@ -77,17 +74,6 @@ public class KineticaFieldMapper {
 	}
 	public void setMapped(HashMap<String, Column> mapped) {
 		this.mapped = mapped;
-	}
-
-	/**
-	 * 
-	 * @return a map of Kinetica table columns mapped to Kafka fields
-	 */
-	public HashMap<String, String> getLookup() {
-		return lookup;
-	}
-	public void setLookup(HashMap<String, String> lookup) {
-		this.lookup = lookup;
 	}
 	
 	

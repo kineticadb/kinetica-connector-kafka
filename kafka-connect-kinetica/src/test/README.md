@@ -1,19 +1,19 @@
 # Kinetica Kafka Connector JUnit tests
 
-There are two separate JUnit suites for Kinetica Kafka Connector: 
-- JUnit tests provided with Connector as part of *kafka-connect-kinetica* project, which depend 
-on a running Kinetica instance and mock Kafka services. These tests are used to check 
+There are two separate JUnit suites for Kinetica Kafka Connector:
+- JUnit tests provided with Connector as part of *kafka-connect-kinetica* project, which depend
+on a running Kinetica instance and mock Kafka services. These tests are used to check
 Kinetica DB service avaiability to run Kafka Connector successfully and verify Connector
-configuration. JUnit tests in *kafka-connect-kinetica* project follow the "happy path" when 
-mapping schemas and processing Kafka records. 
-- JUnit tests provided in a sister project *test-connect* also depend on a running Kinetica DB 
-instance, but some of the helper classes are configured to run as stand-alone applications that 
-can access Kafka stack and post messages to Kafka topics in various formats, including 
-plain String, schemaless JSON, schemaless Oracle Golden Gate JSON, avro encoded JSON, 
-and producing messages with multiple schema versions of the same object 
+configuration. JUnit tests in *kafka-connect-kinetica* project follow the "happy path" when
+mapping schemas and processing Kafka records.
+- JUnit tests provided in a sister project *test-connect* also depend on a running Kinetica DB
+instance, but some of the helper classes are configured to run as stand-alone applications that
+can access Kafka stack and post messages to Kafka topics in various formats, including
+plain String, schemaless JSON, schemaless Oracle Golden Gate JSON, avro encoded JSON,
+and producing messages with multiple schema versions of the same object
 (to test Kafka Connector's implementation of schema evolution).
 
-For a more detailed documantation of available formats, test utilities and 
+For a more detailed documantation of available formats, test utilities and
 integration tests that require both Kinetica DB and Kafka stack (Confluent platform)
 running, please refer to [test-connect/README.md][TEST_LOC] project
 [TEST_LOC]: <test-connect/README.md>
@@ -22,21 +22,21 @@ running, please refer to [test-connect/README.md][TEST_LOC] project
 ## Maven build test goal Prerequisites
 
 Current setup uses Kinetica addresses: localhost:9191, localhost:8080/gadmin.
-Kafka Kinetica Connector uses ports 8090 and 8089 (as Sink and Source ports), if the 
+Kafka Kinetica Connector uses ports 8090 and 8089 (as Sink and Source ports), if the
 port is undefined, it uses 8083 by default. When starting Kinetica and Kafka on the same machine,
 make sure there is no port conflict (some configurations use ports 8088 and 8082 in default
-settings which can lead to Confluent rest and ksql services failing).  
+settings which can lead to Confluent rest and ksql services failing).
 
-Start Kinetica DB and GAdmin (please refer to Kinetica Documentation for [detailed instructions][KINETICA_DOCS_START]) 
+Start Kinetica DB and GAdmin (please refer to Kinetica Documentation for [detailed instructions][KINETICA_DOCS_START])
 [KINETICA_DOCS_START]: <https://www.kinetica.com/docs/gpudbAdmin/services.html>
 [KAFKA_DOC_START]: <https://kafka.apache.org/quickstart>
 
-Make sure that you have a running Kinetica instance, and that its URL and user credentials 
+Make sure that you have a running Kinetica instance, and that its URL and user credentials
 are properly configured in files `config/quickstart-kinetica-sink.properties`
 and `config/quickstart-kinetica-source.properties`.
 
 
-Clone and build the *kafka-connect-kinetica* project as follows: 
+Clone and build the *kafka-connect-kinetica* project as follows:
 
 ```sh
 git clone https://github.com/gisfederal/kinetica-connector-kafka
@@ -52,7 +52,7 @@ Results :
 Tests run: 41, Failures: 0, Errors: 0, Skipped: 2
 ```
 
-If any of the tests failed, please review the Surefire reports available in 
+If any of the tests failed, please review the Surefire reports available in
 `kafka-connect-kinetica/target/surefire-reports` folder.
 
 Verify that running JUnit tests as a goal of Maven build created the following tables in Kinetica DB *TEST* collection:
@@ -70,9 +70,9 @@ tableA
 
 ## Datapump Test Utility
 
-This JUnit tests suite also provides a standalone datapump utility that can be used as a part of integration test 
+This JUnit tests suite also provides a standalone datapump utility that can be used as a part of integration test
 between Kafka stack and Kinetica DB. TestDataPump is configured to generate fake "TweetRecord" activity, it
-creates Kinetica DB tables `KafkaConnectorTest` and `KafkaConnectorTest2` and inserts batches of records 
+creates Kinetica DB tables `KafkaConnectorTest` and `KafkaConnectorTest2` and inserts batches of records
 at regular intervals (see `batch-size` and `delay-seconds` configuration options).
 
 ```sh
@@ -84,17 +84,17 @@ usage: TestDataPump [options] [URL]
  -t,--total-batches <count>  Number of batches to insert.
 ```
 
-The below example (built for kafka 2.0.0 amd kinetica 7.0.0.0) runs the datapump with default options and will 
+The below example (built for kafka 2.0.0 amd kinetica 7.1.0.0) runs the datapump with default options and will
 insert into Kinetica table batches of 10 records every 3 seconds.
 
 ```sh
-java -cp kafka-2.0.0-connector-kinetica-7.0.0.0-tests.jar:kafka-2.0.0-connector-kinetica-7.0.0.0-jar-with-dependencies.jar \
+java -cp kafka-2.0.0-connector-kinetica-7.1.0.0-tests.jar:kafka-2.0.0-connector-kinetica-7.1.0.0-jar-with-dependencies.jar \
     com.kinetica.kafka.TestDataPump http://localhost:9191
 ```
 You can also provide a relative path to Kinetica DB instance configuration file that contains URL, username, password and timeout:
 
 ```sh
-java -cp kafka-2.0.0-connector-kinetica-7.0.0.0-tests.jar:kafka-2.0.0-connector-kinetica-7.0.0.0-jar-with-dependencies.jar \
+java -cp kafka-2.0.0-connector-kinetica-7.1.0.0-tests.jar:kafka-2.0.0-connector-kinetica-7.1.0.0-jar-with-dependencies.jar \
     com.kinetica.kafka.TestDataPump -c config/quickstart-kinetica-sink.properties
 ```
 
@@ -168,8 +168,8 @@ tasks.max = 1
 
 # Kinetica specific config
 kinetica.url = http://localhost:9191
-kinetica.collection_name = TEST
-kinetica.table_prefix = out_
+kinetica.tables.collection_name = TEST
+kinetica.tables.prefix = out_
 kinetica.timeout = 1000
 kinetica.batch_size = 100
 ```
@@ -180,7 +180,7 @@ The rest of this system test will require three terminal windows.
 
 ```sh
 $ cd <path/to/Kafka>
-$ bin/zookeeper-server-start.sh config/zookeeper.properties 
+$ bin/zookeeper-server-start.sh config/zookeeper.properties
 $ bin/kafka-server-start.sh config/server.properties
 ```
 
@@ -188,7 +188,7 @@ $ bin/kafka-server-start.sh config/server.properties
 * In terminals 3 and 4, start kafka source and sink connectors:
 
 ```sh
-$ connect-standalone connect-standalone-source.properties quickstart-kinetica-source.properties 
+$ connect-standalone connect-standalone-source.properties quickstart-kinetica-source.properties
 ```
 
 ```sh
@@ -199,8 +199,8 @@ $ connect-standalone connect-standalone-sink.properties quickstart-kinetica-sink
 * Verify that data is copied to tables `out_KafkaConnectorTest` and `out_KafkaConnectorTest2`.
 
 
-To test schemaless JSON format, in `connect-standalone-source.properties` and 
-`connect-standalone-sink.properties` files set 
+To test schemaless JSON format, in `connect-standalone-source.properties` and
+`connect-standalone-sink.properties` files set
 
 ```
 key.converter.schemas.enable=false
@@ -212,5 +212,5 @@ After running the Integration test you should see the following Kinetica DB tabl
 KafkaConnectorTest
 KafkaConnectorTest2
 out_KafkaConnectorTest
-``` 
+```
 and Kafka topics `Tweets.KafkaConnectorTest`, `Tweets.KafkaConnectorTest2` on provided Kafka stack.

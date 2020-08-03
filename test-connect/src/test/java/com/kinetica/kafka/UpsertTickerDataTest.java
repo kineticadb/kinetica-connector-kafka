@@ -58,7 +58,7 @@ public class UpsertTickerDataTest {
         String prefix = "Insert";
         Map<String, String> config = 
         		ConnectorConfigHelper.getParameterizedConfig(TICKER, COLLECTION, prefix, "", true, false, true, false, false, false);
-        String tableName = prefix+TICKER;
+        String tableName = ConnectorConfigHelper.addCollection(prefix+TICKER, COLLECTION);
         gpudb.clearTable(tableName, "", 
         		GPUdbBase.options(ClearTableRequest.Options.NO_ERROR_IF_NOT_EXISTS, ClearTableRequest.Options.TRUE));
 
@@ -72,15 +72,17 @@ public class UpsertTickerDataTest {
         runTickerSinkTask(task, TICKER);
         Thread.sleep(1000);
         
-        boolean tableExists = gpudb.hasTable(prefix+TICKER, null).getTableExists(); 
+        boolean tableExists = gpudb.hasTable(ConnectorConfigHelper.addCollection(prefix+TICKER, COLLECTION), null).getTableExists(); 
         assertTrue(tableExists);
         
         // expect table size to match number of Kafka messages generated/ingested
-        ShowTableResponse response = gpudb.showTable(prefix+TICKER, tableSizeProps);        
+        ShowTableResponse response = gpudb.showTable(ConnectorConfigHelper.addCollection(prefix+TICKER, COLLECTION), tableSizeProps);        
         int size = response.getFullSizes().get(0).intValue();
         // Kinetica table has 3 batches of data stored because 3 batches of data were sent  
         // and PK is not set on data table 
         assertEquals(size, 3 * batch_size);
+        
+        ConnectorConfigHelper.tableCleanUp(this.gpudb, new String[] {tableName});
         
     }
 
@@ -91,18 +93,14 @@ public class UpsertTickerDataTest {
         String prefix = "UpsertOff";
         Map<String, String> config = 
         		ConnectorConfigHelper.getParameterizedConfig(TICKER, COLLECTION, prefix, "", true, false, true, false, false, false);
-        
-        SinkSchemaManager manager = new SinkSchemaManager(config);
-        String tableName = manager.getDestTable(TICKER, (SchemaRegistryUtils.KAFKA_TICKER_SCHEMA).toString());
+        String tableName = ConnectorConfigHelper.addCollection(prefix+TICKER, COLLECTION);
         gpudb.clearTable(tableName, "", 
         		GPUdbBase.options(ClearTableRequest.Options.NO_ERROR_IF_NOT_EXISTS, ClearTableRequest.Options.TRUE));
-        
-        KineticaFieldMapper mapper = new KineticaFieldMapper(tableName, null);
-        KineticaTypeConverter.convertTypeFromSchema(SchemaRegistryUtils.KAFKA_TICKER_SCHEMA, mapper);
-        
+        		
         // Create Kinetica table with first field made PK
+        List<Column> temp = KineticaTypeConverter.convertTypeFromSchema(SchemaRegistryUtils.KAFKA_TICKER_SCHEMA).getColumns();
         List<Column> columns = new ArrayList<Column>();
-        for (Column col : mapper.getMapped().values()) {
+        for (Column col : temp) {
         	List<String> options = new ArrayList<String>(col.getProperties());
         	if (col.getName().equalsIgnoreCase(SchemaRegistryUtils.TICKER_PK)) {
         		options.add(com.gpudb.ColumnProperty.PRIMARY_KEY);
@@ -112,7 +110,7 @@ public class UpsertTickerDataTest {
         
         Type gpudbType = new Type(columns);
         String typeId = gpudbType.create(gpudb);
-        if (gpudb.hasTable(prefix+TICKER, null).getTableExists()) {
+        if (gpudb.hasTable(ConnectorConfigHelper.addCollection(prefix+TICKER, COLLECTION), null).getTableExists()) {
         	
         }
         gpudb.createTable(tableName, typeId, GPUdbBase.options(CreateTableRequest.Options.COLLECTION_NAME, COLLECTION) );
@@ -120,7 +118,7 @@ public class UpsertTickerDataTest {
         Thread.sleep(1000);
         
         // Assert that table was created successfully
-        boolean tableExists = gpudb.hasTable(prefix+TICKER, null).getTableExists(); 
+        boolean tableExists = gpudb.hasTable(ConnectorConfigHelper.addCollection(prefix+TICKER, COLLECTION), null).getTableExists(); 
         assertTrue(tableExists);
 
         // Configure and start connector and sinktask
@@ -136,7 +134,7 @@ public class UpsertTickerDataTest {
         runTickerSinkTask(task, TICKER);
         Thread.sleep(1000);
         
-        ShowTableResponse response = gpudb.showTable(prefix+TICKER, tableSizeProps);        
+        ShowTableResponse response = gpudb.showTable(ConnectorConfigHelper.addCollection(prefix+TICKER, COLLECTION), tableSizeProps);        
         int size = response.getFullSizes().get(0).intValue();
         // despite the fact that 3 batches of data were sent through connector, Kinetica table
         // has one batch size of data stored (the oldest data) 
@@ -156,6 +154,8 @@ public class UpsertTickerDataTest {
         	assertEquals(rec.get("lastUpdated"), ((Struct)controlSet.get(rec.get("symbol")).value()).get("lastUpdated"));
         }
         
+        ConnectorConfigHelper.tableCleanUp(this.gpudb, new String[] {tableName});
+        
     }
 
     // Kafka connector is configured to overwrite records on same PK with new data 
@@ -164,18 +164,14 @@ public class UpsertTickerDataTest {
         // Connector is configured to have an additional table prefix
         String prefix = "UpsertOn";
         Map<String, String> config = ConnectorConfigHelper.getParameterizedConfig(TICKER, COLLECTION, prefix, "", true, false, true, false, false, true);
-
-        SinkSchemaManager manager = new SinkSchemaManager(config);
-        String tableName = manager.getDestTable(TICKER, (SchemaRegistryUtils.KAFKA_TICKER_SCHEMA).toString());
+        String tableName = ConnectorConfigHelper.addCollection(prefix+TICKER, COLLECTION);
         gpudb.clearTable(tableName, "", 
         		GPUdbBase.options(ClearTableRequest.Options.NO_ERROR_IF_NOT_EXISTS, ClearTableRequest.Options.TRUE));
-        
-        KineticaFieldMapper mapper = new KineticaFieldMapper(tableName, null);
-        KineticaTypeConverter.convertTypeFromSchema(SchemaRegistryUtils.KAFKA_TICKER_SCHEMA, mapper);
-        
-        // Create Kinetica table with first field made PK        
+        		
+        // Create Kinetica table with first field made PK
+        List<Column> temp = KineticaTypeConverter.convertTypeFromSchema(SchemaRegistryUtils.KAFKA_TICKER_SCHEMA).getColumns();
         List<Column> columns = new ArrayList<Column>();
-        for (Column col : mapper.getMapped().values()) {
+        for (Column col : temp) {
         	List<String> options = new ArrayList<String>(col.getProperties());
         	if (col.getName().equalsIgnoreCase(SchemaRegistryUtils.TICKER_PK)) {
         		options.add(com.gpudb.ColumnProperty.PRIMARY_KEY);
@@ -185,7 +181,7 @@ public class UpsertTickerDataTest {
         
         Type gpudbType = new Type(columns);
         String typeId = gpudbType.create(gpudb);
-        if (gpudb.hasTable(prefix+TICKER, null).getTableExists()) {
+        if (gpudb.hasTable(ConnectorConfigHelper.addCollection(prefix+TICKER, COLLECTION), null).getTableExists()) {
         	
         }
         gpudb.createTable(tableName, typeId, GPUdbBase.options(CreateTableRequest.Options.COLLECTION_NAME, COLLECTION) );
@@ -193,7 +189,7 @@ public class UpsertTickerDataTest {
         Thread.sleep(1000);
         
         // Assert that table was created successfully
-        boolean tableExists = gpudb.hasTable(prefix+TICKER, null).getTableExists(); 
+        boolean tableExists = gpudb.hasTable(ConnectorConfigHelper.addCollection(prefix+TICKER, COLLECTION), null).getTableExists(); 
         assertTrue(tableExists);
 
         // Configure and start connector and sinktask
@@ -209,7 +205,7 @@ public class UpsertTickerDataTest {
         HashMap<String, SinkRecord> controlSet = runTickerSinkTask(task, TICKER);
         Thread.sleep(1000);
         
-        ShowTableResponse response = gpudb.showTable(prefix+TICKER, tableSizeProps);        
+        ShowTableResponse response = gpudb.showTable(ConnectorConfigHelper.addCollection(prefix+TICKER, COLLECTION), tableSizeProps);        
         int size = response.getFullSizes().get(0).intValue();
         // despite the fact that 3 batches of data were sent through connector, Kinetica table
         // has one batch size of data stored (the most recent data) 
@@ -228,6 +224,9 @@ public class UpsertTickerDataTest {
         	// long timestamp lastUpdated matches in table data and reference set
         	assertEquals(rec.get("lastUpdated"), ((Struct)controlSet.get(rec.get("symbol")).value()).get("lastUpdated"));
         }
+
+        ConnectorConfigHelper.tableCleanUp(this.gpudb, new String[] {tableName});
+        
     }
     
     

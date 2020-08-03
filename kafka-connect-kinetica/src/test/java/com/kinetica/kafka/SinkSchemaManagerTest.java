@@ -8,11 +8,19 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.kafka.connect.sink.SinkTask;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
 
+import com.gpudb.GPUdb;
+import com.gpudb.RecordObject;
+
 
 public class SinkSchemaManagerTest {
+	
+    private GPUdb gpudb;
+	
     private Map<String, String> baseSinkConfig() {
         Map<String, String> config = new HashMap<String, String>();
         
@@ -23,14 +31,22 @@ public class SinkSchemaManagerTest {
         config.put("name", "KineticaQuickStartSinkConnector");
         config.put(KineticaSinkConnectorConfig.PARAM_BATCH_SIZE, "100");
         config.put(KineticaSinkConnectorConfig.PARAM_RETRY_COUNT, "1");
-        config.put(
-        		KineticaSinkConnectorConfig.PARAM_FLATTEN_SOURCE_SCHEMA, 
-        		KineticaSinkConnectorConfig.ARRAY_FLATTENING.CONVERT_TO_STRING.name());
         
         return config;
     }
 
-    private static String replacement = "_"; 
+    private static String replacement = KineticaSinkConnectorConfig.DEFAULT_DOT_REPLACEMENT; 
+    
+    @Before
+    public void setup() throws Exception {
+        this.gpudb = TestUtils.getGPUdb();        
+    }
+    
+    @After
+    public void cleanup() throws Exception {
+    	this.gpudb = null;
+    }
+    
     
     @Test // #1
     public void noTopicNoCollection() throws Exception {
@@ -47,6 +63,8 @@ public class SinkSchemaManagerTest {
         // No topic name, no table override, single table per topic flag does not matter, 
         // message is a plain JSON, tableName comes from schema class
         assertEquals(destinationTable, inputSchema);
+        
+        TestUtils.tableCleanUp(this.gpudb, destinationTable);
     }
     
     @Test // #3
@@ -66,6 +84,8 @@ public class SinkSchemaManagerTest {
         // Topic name, no collection or prefix, single table per topic
         // tableName comes from topic
         assertEquals(destinationTable, topic);
+        
+        TestUtils.tableCleanUp(this.gpudb, destinationTable);
     }
 
     
@@ -86,6 +106,8 @@ public class SinkSchemaManagerTest {
         // Topic name, no collection or prefix, single table per topic
         // tableName comes from topic
         assertEquals(destinationTable, messageTopic);
+        
+        TestUtils.tableCleanUp(this.gpudb, destinationTable);
     }
     
     @Test // #4.5
@@ -104,7 +126,9 @@ public class SinkSchemaManagerTest {
         
         // Topic name, no collection or prefix, single table per topic
         // tableName comes from topic where dots are replaced.
-        assertEquals(destinationTable, topic);
+        assertEquals(destinationTable, topic.replaceAll("[.]", replacement));
+        
+        TestUtils.tableCleanUp(this.gpudb, destinationTable);
     }
 
     @Test // #5
@@ -123,7 +147,9 @@ public class SinkSchemaManagerTest {
         
         // Topic name, no collection or prefix, single table per topic
         // tableName comes from topic where dots are replaced.
-        assertEquals(destinationTable, messageTopic);
+        assertEquals(destinationTable, messageTopic.replaceAll("[.]", replacement));
+        
+        TestUtils.tableCleanUp(this.gpudb, destinationTable);
     }
 
     @Test // #6
@@ -143,6 +169,8 @@ public class SinkSchemaManagerTest {
         // No topic name, no table override, single table per topic flag does not matter, 
         // existing prefix, message is a plain JSON, tableName comes from prefix and schema class
         assertEquals(destinationTable, prefix + inputSchema);
+        
+        TestUtils.tableCleanUp(this.gpudb, destinationTable);
     }
     
     @Test // #8
@@ -164,6 +192,8 @@ public class SinkSchemaManagerTest {
         // Single topic name, no table override, single table per topic, 
         // existing prefix, tableName comes from prefix and topic name
         assertEquals(destinationTable, prefix + topic);
+        
+        TestUtils.tableCleanUp(this.gpudb, destinationTable);
     }
 
     @Test // #9
@@ -185,6 +215,8 @@ public class SinkSchemaManagerTest {
         // Multiple topics name, no table override, single table per topic, 
         // existing prefix, tableName comes from prefix and topic name
         assertEquals(destinationTable, prefix + messageTopic);
+        
+        TestUtils.tableCleanUp(this.gpudb, destinationTable);
     }
 
     @Test // #10
@@ -205,7 +237,9 @@ public class SinkSchemaManagerTest {
         
         // Multiple topics name, no table override, single table per topic, 
         // existing prefix, tableName comes from prefix and topic name with replaced dots
-        assertEquals(destinationTable, prefix + messageTopic);
+        assertEquals(destinationTable, prefix + messageTopic.replaceAll("[.]", replacement));
+        
+        TestUtils.tableCleanUp(this.gpudb, destinationTable);
     }
 
     @Test // #11
@@ -216,7 +250,7 @@ public class SinkSchemaManagerTest {
         
         Map<String, String> config  = baseSinkConfig();
         config.put(SinkTask.TOPICS_REGEX_CONFIG, topic_regex);
-        config.put(KineticaSinkConnectorConfig.PARAM_COLLECTION, collection);
+        config.put(KineticaSinkConnectorConfig.PARAM_SCHEMA, collection);
         
         SinkSchemaManager schemaMgr = new SinkSchemaManager(config);
         String messageTopic = "";
@@ -224,7 +258,9 @@ public class SinkSchemaManagerTest {
         
         // No topic name, no table override, single table per topic flag does not matter, 
         // message is a plain JSON, tableName comes from collection and schema class
-        assertEquals(destinationTable, inputSchema);
+        assertEquals(destinationTable, collection + "." + inputSchema);
+        
+        TestUtils.tableCleanUp(this.gpudb, destinationTable);
     }
     
     @Test // #13
@@ -237,7 +273,7 @@ public class SinkSchemaManagerTest {
         Map<String, String> config  = baseSinkConfig();
         config.put(SinkTask.TOPICS_CONFIG, topic);
         config.put(KineticaSinkConnectorConfig.PARAM_SINGLE_TABLE_PER_TOPIC, singleTablePerTopic);
-        config.put(KineticaSinkConnectorConfig.PARAM_COLLECTION, collection);
+        config.put(KineticaSinkConnectorConfig.PARAM_SCHEMA, collection);
         
         SinkSchemaManager schemaMgr = new SinkSchemaManager(config);
         String messageTopic = topic;
@@ -245,7 +281,9 @@ public class SinkSchemaManagerTest {
         
         // Topic name, no collection or prefix, single table per topic
         // tableName comes from collection and topic
-        assertEquals(destinationTable, topic);
+        assertEquals(destinationTable, collection + "." + topic);
+        
+        TestUtils.tableCleanUp(this.gpudb, destinationTable);
     }
 
     
@@ -259,7 +297,7 @@ public class SinkSchemaManagerTest {
         Map<String, String> config  = baseSinkConfig();
         config.put(SinkTask.TOPICS_CONFIG, topic);
         config.put(KineticaSinkConnectorConfig.PARAM_SINGLE_TABLE_PER_TOPIC, singleTablePerTopic);
-        config.put(KineticaSinkConnectorConfig.PARAM_COLLECTION, collection);
+        config.put(KineticaSinkConnectorConfig.PARAM_SCHEMA, collection);
         
         SinkSchemaManager schemaMgr = new SinkSchemaManager(config);
         String messageTopic = topic.split(",")[0];
@@ -267,7 +305,9 @@ public class SinkSchemaManagerTest {
         
         // Topic name, no collection or prefix, single table per topic
         // tableName comes from collection and topic
-        assertEquals(destinationTable, messageTopic);
+        assertEquals(destinationTable, collection + "." + messageTopic);
+        
+        TestUtils.tableCleanUp(this.gpudb, destinationTable);
     }
     
     @Test // #14.5
@@ -280,7 +320,7 @@ public class SinkSchemaManagerTest {
         Map<String, String> config  = baseSinkConfig();
         config.put(SinkTask.TOPICS_CONFIG, topic);
         config.put(KineticaSinkConnectorConfig.PARAM_SINGLE_TABLE_PER_TOPIC, singleTablePerTopic);
-        config.put(KineticaSinkConnectorConfig.PARAM_COLLECTION, collection);
+        config.put(KineticaSinkConnectorConfig.PARAM_SCHEMA, collection);
         
         SinkSchemaManager schemaMgr = new SinkSchemaManager(config);
         String messageTopic = topic;
@@ -288,7 +328,9 @@ public class SinkSchemaManagerTest {
         
         // Topic name, no collection or prefix, single table per topic
         // tableName comes from collection and topic name where dots are replaced.
-        assertEquals(destinationTable, topic);
+        assertEquals(destinationTable, collection + "." + topic.replaceAll("[.]", replacement));
+        
+        TestUtils.tableCleanUp(this.gpudb, destinationTable);
     }
 
     @Test // #15
@@ -301,7 +343,7 @@ public class SinkSchemaManagerTest {
         Map<String, String> config  = baseSinkConfig();
         config.put(SinkTask.TOPICS_CONFIG, topic);
         config.put(KineticaSinkConnectorConfig.PARAM_SINGLE_TABLE_PER_TOPIC, singleTablePerTopic);
-        config.put(KineticaSinkConnectorConfig.PARAM_COLLECTION, collection);
+        config.put(KineticaSinkConnectorConfig.PARAM_SCHEMA, collection);
         
         SinkSchemaManager schemaMgr = new SinkSchemaManager(config);
         String messageTopic = topic.split(",")[0];
@@ -309,7 +351,9 @@ public class SinkSchemaManagerTest {
         
         // Topic name, no collection or prefix, single table per topic
         // tableName comes from collection and topic where dots are replaced.
-        assertEquals(destinationTable, messageTopic);
+        assertEquals(destinationTable, collection + "." + messageTopic.replaceAll("[.]", replacement));
+        
+        TestUtils.tableCleanUp(this.gpudb, destinationTable);
     }
 
     @Test // #16
@@ -322,7 +366,7 @@ public class SinkSchemaManagerTest {
         Map<String, String> config  = baseSinkConfig();
         config.put(SinkTask.TOPICS_REGEX_CONFIG, topic_regex);
         config.put(KineticaSinkConnectorConfig.PARAM_TABLE_PREFIX, prefix);
-        config.put(KineticaSinkConnectorConfig.PARAM_COLLECTION, collection);
+        config.put(KineticaSinkConnectorConfig.PARAM_SCHEMA, collection);
         
         SinkSchemaManager schemaMgr = new SinkSchemaManager(config);
         String messageTopic = "";
@@ -331,7 +375,9 @@ public class SinkSchemaManagerTest {
         // No topic name, no table override, single table per topic flag does not matter, 
         // existing prefix, message is a plain JSON, tableName comes from  collection, 
         // prefix and schema class
-        assertEquals(destinationTable, prefix + inputSchema);
+        assertEquals(destinationTable, collection + "." + prefix + inputSchema);
+        
+        TestUtils.tableCleanUp(this.gpudb, destinationTable);
     }
     
     @Test // #18
@@ -346,7 +392,7 @@ public class SinkSchemaManagerTest {
         config.put(SinkTask.TOPICS_CONFIG, topic);
         config.put(KineticaSinkConnectorConfig.PARAM_TABLE_PREFIX, prefix);
         config.put(KineticaSinkConnectorConfig.PARAM_SINGLE_TABLE_PER_TOPIC, singleTablePerTopic);
-        config.put(KineticaSinkConnectorConfig.PARAM_COLLECTION, collection);
+        config.put(KineticaSinkConnectorConfig.PARAM_SCHEMA, collection);
         
         SinkSchemaManager schemaMgr = new SinkSchemaManager(config);
         String messageTopic = topic;
@@ -354,7 +400,9 @@ public class SinkSchemaManagerTest {
         
         // Single topic name, no table override, single table per topic, 
         // existing prefix, tableName comes from collection, prefix and topic name
-        assertEquals(destinationTable, prefix + topic);
+        assertEquals(destinationTable, collection + "." + prefix + topic);
+        
+        TestUtils.tableCleanUp(this.gpudb, destinationTable);
     }
 
     @Test // #19
@@ -369,7 +417,7 @@ public class SinkSchemaManagerTest {
         config.put(SinkTask.TOPICS_CONFIG, topic);
         config.put(KineticaSinkConnectorConfig.PARAM_TABLE_PREFIX, prefix);
         config.put(KineticaSinkConnectorConfig.PARAM_SINGLE_TABLE_PER_TOPIC, singleTablePerTopic);
-        config.put(KineticaSinkConnectorConfig.PARAM_COLLECTION, collection);
+        config.put(KineticaSinkConnectorConfig.PARAM_SCHEMA, collection);
         
         SinkSchemaManager schemaMgr = new SinkSchemaManager(config);
         String messageTopic = topic.split(",")[0];
@@ -377,7 +425,9 @@ public class SinkSchemaManagerTest {
         
         // Multiple topics name, no table override, single table per topic, 
         // existing prefix, tableName comes from collection, prefix and topic name
-        assertEquals(destinationTable, prefix + messageTopic);
+        assertEquals(destinationTable, collection + "." + prefix + messageTopic);
+        
+        TestUtils.tableCleanUp(this.gpudb, destinationTable);
     }
 
     @Test // #20
@@ -392,7 +442,7 @@ public class SinkSchemaManagerTest {
         config.put(SinkTask.TOPICS_CONFIG, topic);
         config.put(KineticaSinkConnectorConfig.PARAM_TABLE_PREFIX, prefix);
         config.put(KineticaSinkConnectorConfig.PARAM_SINGLE_TABLE_PER_TOPIC, singleTablePerTopic);
-        config.put(KineticaSinkConnectorConfig.PARAM_COLLECTION, collection);
+        config.put(KineticaSinkConnectorConfig.PARAM_SCHEMA, collection);
         
         SinkSchemaManager schemaMgr = new SinkSchemaManager(config);
         String messageTopic = topic.split(",")[0];
@@ -401,7 +451,9 @@ public class SinkSchemaManagerTest {
         // Multiple topics name, no table override, single table per topic, 
         // existing prefix, tableName comes from collection, prefix and 
         // topic name with replaced dots
-        assertEquals(destinationTable, prefix + messageTopic);
+        assertEquals(destinationTable, collection + "." + prefix + messageTopic.replaceAll("[.]", replacement));
+        
+        TestUtils.tableCleanUp(this.gpudb, destinationTable);
     }
     
     @Test // #21
@@ -424,6 +476,7 @@ public class SinkSchemaManagerTest {
         // tableName comes from override
         assertEquals(destinationTable, override);
         
+        TestUtils.tableCleanUp(this.gpudb, destinationTable);
     }
 
     @Test // #22 
@@ -446,6 +499,7 @@ public class SinkSchemaManagerTest {
         // tableName comes from override
         assertEquals(destinationTable, messageTopic);
         
+        TestUtils.tableCleanUp(this.gpudb, destinationTable);
     }
 
     @Test // #23.5
@@ -467,6 +521,7 @@ public class SinkSchemaManagerTest {
         // tableName comes from override
         assertEquals(destinationTable, override.split(",")[0]);
         
+        TestUtils.tableCleanUp(this.gpudb, destinationTable);
     }    
 
     @Test // #23.(n)
@@ -482,7 +537,7 @@ public class SinkSchemaManagerTest {
         config.put(SinkTask.TOPICS_CONFIG, topic);
         config.put(KineticaSinkConnectorConfig.PARAM_DEST_TABLE_OVERRIDE, override);
         config.put(KineticaSinkConnectorConfig.PARAM_SINGLE_TABLE_PER_TOPIC, singleTablePerTopic);
-        config.put(KineticaSinkConnectorConfig.PARAM_COLLECTION, collection);
+        config.put(KineticaSinkConnectorConfig.PARAM_SCHEMA, collection);
         config.put(KineticaSinkConnectorConfig.PARAM_TABLE_PREFIX, prefix);
         
         SinkSchemaManager schemaMgr = new SinkSchemaManager(config);
@@ -493,8 +548,9 @@ public class SinkSchemaManagerTest {
         // match the length of the list of table overrides
         // expect override to be ignored, and table name to be derived from 
         // topic name, collection and prefix
-        assertEquals(destinationTable, prefix + messageTopic);
-        
+        assertEquals(destinationTable, collection + "." + prefix + messageTopic.replaceAll("[.]", replacement));
+                
+        TestUtils.tableCleanUp(this.gpudb, destinationTable);
     }    
     
     @Test //#27 
@@ -509,7 +565,7 @@ public class SinkSchemaManagerTest {
         config.put(SinkTask.TOPICS_CONFIG, topic);
         config.put(KineticaSinkConnectorConfig.PARAM_DEST_TABLE_OVERRIDE, override);
         config.put(KineticaSinkConnectorConfig.PARAM_SINGLE_TABLE_PER_TOPIC, singleTablePerTopic);
-        config.put(KineticaSinkConnectorConfig.PARAM_COLLECTION, collection);
+        config.put(KineticaSinkConnectorConfig.PARAM_SCHEMA, collection);
         
         SinkSchemaManager schemaMgr = new SinkSchemaManager(config);
         String messageTopic = topic;
@@ -517,8 +573,9 @@ public class SinkSchemaManagerTest {
 
         // For a single topic with collection and table override 
         // table name to be derived from collection and override
-        assertEquals(destinationTable, override);
+        assertEquals(destinationTable, collection + "." + override);
         
+        TestUtils.tableCleanUp(this.gpudb, destinationTable);
     }     
 
     @Test //#30
@@ -534,7 +591,7 @@ public class SinkSchemaManagerTest {
         config.put(SinkTask.TOPICS_CONFIG, topic);
         config.put(KineticaSinkConnectorConfig.PARAM_DEST_TABLE_OVERRIDE, override);
         config.put(KineticaSinkConnectorConfig.PARAM_SINGLE_TABLE_PER_TOPIC, singleTablePerTopic);
-        config.put(KineticaSinkConnectorConfig.PARAM_COLLECTION, collection);
+        config.put(KineticaSinkConnectorConfig.PARAM_SCHEMA, collection);
         config.put(KineticaSinkConnectorConfig.PARAM_TABLE_PREFIX, prefix);
         
         SinkSchemaManager schemaMgr = new SinkSchemaManager(config);
@@ -543,8 +600,9 @@ public class SinkSchemaManagerTest {
 
         // For a single topic with collection, prefix and table override 
         // table name to be derived from collection and override
-        assertEquals(destinationTable, override);
+        assertEquals(destinationTable, collection + "." + override);
         
+        TestUtils.tableCleanUp(this.gpudb, destinationTable);
     }    
 
     @Test //#41
@@ -559,7 +617,7 @@ public class SinkSchemaManagerTest {
         config.put(SinkTask.TOPICS_CONFIG, topic);
         config.put(KineticaSinkConnectorConfig.PARAM_DEST_TABLE_OVERRIDE, override);
         config.put(KineticaSinkConnectorConfig.PARAM_SINGLE_TABLE_PER_TOPIC, singleTablePerTopic);
-        config.put(KineticaSinkConnectorConfig.PARAM_COLLECTION, collection);
+        config.put(KineticaSinkConnectorConfig.PARAM_SCHEMA, collection);
         
         SinkSchemaManager schemaMgr = new SinkSchemaManager(config);
         String messageTopic = topic.split(",")[0];
@@ -567,8 +625,9 @@ public class SinkSchemaManagerTest {
 
         // For multiple topics with collection and bad table override 
         // table name to be derived from collection and topic name with replaced dots
-        assertEquals(destinationTable, messageTopic);
+        assertEquals(destinationTable, collection + "." + messageTopic.replaceAll("[.]", replacement));
         
+        TestUtils.tableCleanUp(this.gpudb, destinationTable);
     }     
 
     @Test //#51
@@ -583,7 +642,7 @@ public class SinkSchemaManagerTest {
         config.put(SinkTask.TOPICS_CONFIG, topic);
         config.put(KineticaSinkConnectorConfig.PARAM_DEST_TABLE_OVERRIDE, override);
         config.put(KineticaSinkConnectorConfig.PARAM_SINGLE_TABLE_PER_TOPIC, singleTablePerTopic);
-        config.put(KineticaSinkConnectorConfig.PARAM_COLLECTION, collection);
+        config.put(KineticaSinkConnectorConfig.PARAM_SCHEMA, collection);
         
         SinkSchemaManager schemaMgr = new SinkSchemaManager(config);
         String messageTopic = topic;
@@ -591,8 +650,9 @@ public class SinkSchemaManagerTest {
 
         // For single topic with collection and bad table override 
         // table name to be derived from collection and topic name with replaced dots
-        assertEquals(destinationTable, messageTopic);
+        assertEquals(destinationTable, collection + "." + messageTopic);
         
+        TestUtils.tableCleanUp(this.gpudb, destinationTable);
     }     
 
     @Test //#61
@@ -617,6 +677,7 @@ public class SinkSchemaManagerTest {
         // table name to be derived from override
         assertEquals(destinationTable, override.split(",")[0]);
         
+        TestUtils.tableCleanUp(this.gpudb, destinationTable);
     }     
 
     @Test //#64
@@ -631,7 +692,7 @@ public class SinkSchemaManagerTest {
         config.put(SinkTask.TOPICS_CONFIG, topic);
         config.put(KineticaSinkConnectorConfig.PARAM_DEST_TABLE_OVERRIDE, override);
         config.put(KineticaSinkConnectorConfig.PARAM_SINGLE_TABLE_PER_TOPIC, singleTablePerTopic);
-        config.put(KineticaSinkConnectorConfig.PARAM_COLLECTION, collection);
+        config.put(KineticaSinkConnectorConfig.PARAM_SCHEMA, collection);
         
         SinkSchemaManager schemaMgr = new SinkSchemaManager(config);
         String messageTopic = topic.split(",")[0];
@@ -639,8 +700,9 @@ public class SinkSchemaManagerTest {
 
         // For multiple topics with collection and good table override (no dots) 
         // table name to be derived from collection and override
-        assertEquals(destinationTable, override.split(",")[0]);
+        assertEquals(destinationTable, collection + "." + override.split(",")[0]);
         
+        TestUtils.tableCleanUp(this.gpudb, destinationTable);
     } 
 
     @Test //#68
@@ -656,7 +718,7 @@ public class SinkSchemaManagerTest {
         config.put(SinkTask.TOPICS_CONFIG, topic);
         config.put(KineticaSinkConnectorConfig.PARAM_DEST_TABLE_OVERRIDE, override);
         config.put(KineticaSinkConnectorConfig.PARAM_SINGLE_TABLE_PER_TOPIC, singleTablePerTopic);
-        config.put(KineticaSinkConnectorConfig.PARAM_COLLECTION, collection);
+        config.put(KineticaSinkConnectorConfig.PARAM_SCHEMA, collection);
         config.put(KineticaSinkConnectorConfig.PARAM_TABLE_PREFIX, prefix);
         
         SinkSchemaManager schemaMgr = new SinkSchemaManager(config);
@@ -667,5 +729,6 @@ public class SinkSchemaManagerTest {
         // table name to be derived from override
         assertEquals(destinationTable, override.split(",")[0]);
         
+        TestUtils.tableCleanUp(this.gpudb, destinationTable);
     } 
 }

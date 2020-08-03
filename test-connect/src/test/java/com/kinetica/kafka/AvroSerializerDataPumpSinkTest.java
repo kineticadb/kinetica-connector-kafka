@@ -39,11 +39,18 @@ public class AvroSerializerDataPumpSinkTest {
         this.gpudb = ConnectorConfigHelper.getGPUdb();
         this.tableSizeProps = new HashMap<String, String>();
         this.tableSizeProps.put("get_sizes", "true");
-        ConnectorConfigHelper.tableCleanUp(this.gpudb, new String[] {TOPIC, TABLE, PREFIX+TOPIC, "noEdits", "ForwardCompatibility", "BackwardCompatibility"});
+        ConnectorConfigHelper.tableCleanUp(this.gpudb, 
+            ConnectorConfigHelper.addCollection(
+                new String[] {TOPIC, TABLE, PREFIX+TOPIC, "noEdits", "ForwardCompatibility", "BackwardCompatibility"}, 
+                COLLECTION));
     }
     
     @After
-    public void cleanup() {
+    public void cleanup() throws GPUdbException {
+    	ConnectorConfigHelper.tableCleanUp(this.gpudb, 
+                ConnectorConfigHelper.addCollection(
+                    new String[] {TOPIC, TABLE, PREFIX+TOPIC, "noEdits", "ForwardCompatibility", "BackwardCompatibility"}, 
+                    COLLECTION));
         this.gpudb = null;
     }
     
@@ -63,11 +70,11 @@ public class AvroSerializerDataPumpSinkTest {
         runSinkTask(task, TOPIC, new int[] {1, 2, 3, 4});
         Thread.sleep(1000);
         
-        boolean tableExists = gpudb.hasTable(TOPIC, null).getTableExists(); 
+        boolean tableExists = gpudb.hasTable(ConnectorConfigHelper.addCollection(TOPIC, COLLECTION), null).getTableExists(); 
         assertTrue(tableExists);
 
         // expect table size to match number of Kafka messages generated/ingested
-        ShowTableResponse response = gpudb.showTable(TOPIC, tableSizeProps);
+        ShowTableResponse response = gpudb.showTable(ConnectorConfigHelper.addCollection(TOPIC, COLLECTION), tableSizeProps);
         int size = response.getFullSizes().get(0).intValue();
         assertEquals(size, batch_size*4);
         
@@ -93,11 +100,11 @@ public class AvroSerializerDataPumpSinkTest {
         runSinkTask(task, TOPIC, new int[] {1, 2, 3, 4});
         Thread.sleep(1000);
         
-        boolean tableExists = gpudb.hasTable(PREFIX+TOPIC, null).getTableExists(); 
+        boolean tableExists = gpudb.hasTable(ConnectorConfigHelper.addCollection(PREFIX+TOPIC, COLLECTION), null).getTableExists(); 
         assertTrue(tableExists);
 
         // expect table size to match number of Kafka messages generated/ingested
-        int size = gpudb.showTable(PREFIX+TOPIC, tableSizeProps).getFullSizes().get(0).intValue();        
+        int size = gpudb.showTable(ConnectorConfigHelper.addCollection(PREFIX+TOPIC, COLLECTION), tableSizeProps).getFullSizes().get(0).intValue();        
         assertEquals(size, batch_size*4);
 
     }
@@ -118,11 +125,11 @@ public class AvroSerializerDataPumpSinkTest {
         runSinkTask(task, TOPIC, new int[] {1, 2, 3, 4});
         Thread.sleep(1000);
         
-        boolean tableExists = gpudb.hasTable(TABLE, null).getTableExists(); 
+        boolean tableExists = gpudb.hasTable(ConnectorConfigHelper.addCollection(TABLE, COLLECTION), null).getTableExists(); 
         assertTrue(tableExists);
 
         // expect table size to match number of Kafka messages generated/ingested
-        int size = gpudb.showTable(TABLE, tableSizeProps).getFullSizes().get(0).intValue();        
+        int size = gpudb.showTable(ConnectorConfigHelper.addCollection(TABLE, COLLECTION), tableSizeProps).getFullSizes().get(0).intValue();        
         assertEquals(size, batch_size*4);
 
     }
@@ -144,11 +151,11 @@ public class AvroSerializerDataPumpSinkTest {
         runSinkTask(task, TOPIC, new int[] {1, 2, 3, 4});
         Thread.sleep(1000);
         
-        boolean tableExists = gpudb.hasTable(tableOverride, null).getTableExists(); 
+        boolean tableExists = gpudb.hasTable(ConnectorConfigHelper.addCollection(tableOverride, COLLECTION), null).getTableExists(); 
         assertTrue(tableExists);
 
         // expect table size to match number of Kafka messages generated/ingested        
-        ShowTableResponse response = gpudb.showTable(tableOverride, tableSizeProps);
+        ShowTableResponse response = gpudb.showTable(ConnectorConfigHelper.addCollection(tableOverride, COLLECTION), tableSizeProps);
 
         int size = response.getFullSizes().get(0).intValue();
         assertEquals(size, batch_size*4);
@@ -177,11 +184,11 @@ public class AvroSerializerDataPumpSinkTest {
         runSinkTask(task, TOPIC, new int[] {1, 2, 4});
         Thread.sleep(1000);
         
-        boolean tableExists = gpudb.hasTable(tableOverride, null).getTableExists(); 
+        boolean tableExists = gpudb.hasTable(ConnectorConfigHelper.addCollection(tableOverride, COLLECTION), null).getTableExists(); 
         assertTrue(tableExists);
 
         // expect table size to match number of Kafka messages generated/ingested        
-        ShowTableResponse response = gpudb.showTable(tableOverride, tableSizeProps);
+        ShowTableResponse response = gpudb.showTable(ConnectorConfigHelper.addCollection(tableOverride, COLLECTION), tableSizeProps);
 
         int size = response.getFullSizes().get(0).intValue();
         assertEquals(size, batch_size*3);
@@ -210,11 +217,11 @@ public class AvroSerializerDataPumpSinkTest {
         runSinkTask(task, TOPIC, new int[] {3, 1, 2, 4});
         Thread.sleep(1000);
         
-        boolean tableExists = gpudb.hasTable(tableOverride, null).getTableExists(); 
+        boolean tableExists = gpudb.hasTable(ConnectorConfigHelper.addCollection(tableOverride, COLLECTION), null).getTableExists(); 
         assertTrue(tableExists);
 
         // expect table size to match number of Kafka messages generated/ingested        
-        ShowTableResponse response = gpudb.showTable(tableOverride, tableSizeProps);
+        ShowTableResponse response = gpudb.showTable(ConnectorConfigHelper.addCollection(tableOverride, COLLECTION), tableSizeProps);
 
         int size = response.getFullSizes().get(0).intValue();
         assertEquals(size, batch_size*4);

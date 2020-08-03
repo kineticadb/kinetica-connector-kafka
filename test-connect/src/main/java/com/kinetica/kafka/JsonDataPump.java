@@ -151,52 +151,6 @@ public class JsonDataPump {
         }
         messageProducer.close();
     }  
-    public static void ProduceAvroMessagesWithSchema(org.apache.avro.Schema schema, String topic) throws Exception
-    {
-        // Start KAFKA publishing
-        Properties props = new Properties();
-        props.put("bootstrap.servers", JsonDataPump.bootstrapUrl);
-        props.put("serializer.class", "kafka.serializer.StringEncoder");
-        props.put("key.serializer", "org.apache.kafka.common.serialization.StringSerializer");
-        props.put("value.serializer", "io.confluent.kafka.serializers.KafkaAvroSerializer");
-        props.put("schema.registry.url", JsonDataPump.schemaRegistry);
-        
-        KafkaProducer<Object, Object> messageProducer = new KafkaProducer<Object, Object>(props);
-        ProducerRecord<Object, Object> producerRecord;
-        String key;
-        GenericRecord obj;
-        for (int i=0; i<JsonDataPump.count; i++) {
-            for (int j=0; j<JsonDataPump.batchSize; j++) {
-                
-                // send a batch of Apples
-                key = "Apple";
-                obj = RandomGenerator.populateGenericRecord(appleSchema);
-                producerRecord = new ProducerRecord<Object, Object>(topic, key, obj);
-                messageProducer.send(producerRecord);
-                System.out.println(key + " " + producerRecord);
-                if (i==0 && j==0) {
-                    // for a newly created topic, set compatibility level to accept all types
-                    SchemaRegistryUtils.setSchemaCompatibility(JsonDataPump.schemaRegistry, topic, SchemaRegistryUtils.CompatibilityLevel.NONE);
-                }
-                
-                //send a batch of Oranges
-                key = "Orange";
-                obj = RandomGenerator.populateGenericRecord(orangeSchema);
-                producerRecord = new ProducerRecord<Object, Object>(topic, key, obj);
-                messageProducer.send(producerRecord);
-                System.out.println(key + " " + producerRecord);
-                
-                //send a batch of Bananas
-                key = "Banana";
-                obj = RandomGenerator.populateGenericRecord(bananaSchema);
-                producerRecord = new ProducerRecord<Object, Object>(topic, key, obj);
-                messageProducer.send(producerRecord);
-                System.out.println(key + " " + producerRecord);
-                
-            }
-        }
-        messageProducer.close();
-    }  
 
     
     public static void ProduceMessages(String bootstrapUrl, int size, int count, String schemaRegistry, String topic) throws Exception
@@ -240,6 +194,28 @@ public class JsonDataPump {
         }
         return sinkRecords;
     }
+    
+    public static List<SinkRecord> mockSinkRecordTickerMessages(String topic) {
+        List<SinkRecord> sinkRecords = new ArrayList<SinkRecord>();
+        
+        for (int i=0; i<JsonDataPump.count; i++) {
+	        Struct data = KafkaSchemaHelpers.populateTicker(SchemaRegistryUtils.KAFKA_TICKER_SCHEMA, i);
+	        sinkRecords.add(new SinkRecord(topic, i, SchemaRegistryUtils.KAFKA_TICKER_SCHEMA.schema(), i, 
+            		SchemaRegistryUtils.KAFKA_TICKER_SCHEMA, data, new Date().getTime()));
+        }
+        return sinkRecords;
+    }    
+
+    public static List<SinkRecord> mockSinkRecordJSONTickerMessages(String topic) {
+        List<SinkRecord> sinkRecords = new ArrayList<SinkRecord>();
+        
+        for (int i=0; i<JsonDataPump.count; i++) {
+	        Struct data = KafkaSchemaHelpers.populateTicker(SchemaRegistryUtils.KAFKA_TICKER_SCHEMA, i);
+	        sinkRecords.add(new SinkRecord(topic, i, null, i, 
+	        		SchemaRegistryUtils.KAFKA_TICKER_SCHEMA, data, new Date().getTime()));
+        }
+        return sinkRecords;
+    }  
     
     public static List<SinkRecord> mockSinkRecordJSONMessages(String topic) {
         List<SinkRecord> sinkRecords = new ArrayList<SinkRecord>();

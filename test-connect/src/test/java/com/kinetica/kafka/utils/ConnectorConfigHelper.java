@@ -2,7 +2,10 @@ package com.kinetica.kafka.utils;
 
 import java.io.FileReader;
 import java.io.Reader;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
@@ -14,6 +17,8 @@ import org.slf4j.LoggerFactory;
 
 import com.gpudb.GPUdb;
 import com.gpudb.GPUdbException;
+import com.gpudb.protocol.DropSchemaRequest;
+import com.gpudb.protocol.HasTableResponse;
 import com.kinetica.kafka.KineticaSinkConnector;
 import com.kinetica.kafka.KineticaSinkConnectorConfig;
 import com.kinetica.kafka.SinkSchemaManager;
@@ -21,6 +26,7 @@ import com.kinetica.kafka.SinkSchemaManager;
 public class ConnectorConfigHelper {
     private final static Logger LOG = LoggerFactory.getLogger(ConnectorConfigHelper.class);
     private final static String CFG_PATH = "config/quickstart-kinetica-sink.properties";
+    private final static String DEFAULT_COLLECTION = "ki_home";
     
     public static Map<String, String> getBasicConfig() throws Exception {
         
@@ -50,7 +56,7 @@ public class ConnectorConfigHelper {
         Map<String, String> config = getBasicConfig();
         
         config.put(SinkTask.TOPICS_CONFIG, topics);
-        config.put(KineticaSinkConnectorConfig.PARAM_COLLECTION, collection);
+        config.put(KineticaSinkConnectorConfig.PARAM_SCHEMA, collection);
         config.put(KineticaSinkConnectorConfig.PARAM_TABLE_PREFIX, tablePrefix);
         config.put(KineticaSinkConnectorConfig.PARAM_DEST_TABLE_OVERRIDE, tableOverride);
         config.put(KineticaSinkConnectorConfig.PARAM_CREATE_TABLE, Boolean.toString(createTable));
@@ -128,7 +134,9 @@ public class ConnectorConfigHelper {
         String tableName = sm.getDestTable(topic, schema);
                 
         // Kinetica table cleanup before running data ingest
-        if(gpudb.hasTable(tableName, null).getTableExists()) {
+        HasTableResponse response = gpudb.hasTable(tableName, null);
+        if(response.getTableExists()) {
+            tableName = response.getTableName();
             gpudb.clearTable(tableName, null, null);
         }
         
@@ -141,12 +149,61 @@ public class ConnectorConfigHelper {
      * @throws Exception
      */    
     public static void tableCleanUp(GPUdb gpudb, String[] tables) throws GPUdbException {
+        HashSet<String> schemas = new HashSet<String>();
         for (String tableName : tables) {
             // Kinetica table cleanup before running data ingest
             if(gpudb.hasTable(tableName, null).getTableExists()) {
+                if (tableName.contains(".")) {
+                    // Extract table schema to be dropped separately
+                    String schemaName = tableName.split("[.]")[0];
+                    // Do not attempt to remove default collection
+                    if (!DEFAULT_COLLECTION.equalsIgnoreCase(schemaName)) {
+                        schemas.add(schemaName);
+                    }
+                }
                 gpudb.clearTable(tableName, null, null);
             }
         }
-    }
 
+        for (String schemaName : schemas) {
+            if (gpudb.hasSchema(schemaName, null).getSchemaExists()) {
+                try {
+            	    com.gpudb.protocol.ShowSchemaResponse resp = gpudb.showSchema(schemaName, null);
+            	    // Schema is dropped only if there are no tables within
+                    if(resp.getSchemaTables() != null && resp.getSchemaTables().size() == 1 
+                            && resp.getSchemaTables().get(0).size() == 0) {
+                        gpudb.dropSchema(schemaName, null);
+                    }
+                } catch (GPUdbException e)  {
+                    continue;
+                }
+            }
+        }
+    }
+    
+    /**
+     * Helper function to add collection to tableName, if configured
+     * @param tableName         destination table name 
+     * @param collection        collection, if configured
+     */
+    public static String addCollection(String tableName, String collection) {
+        if (!tableName.contains(".") && !collection.isEmpty()) {
+            return collection + "." + tableName;
+        } else return tableName;
+    }
+    
+    /**
+     * Helper function to add collection to tableName, if configured
+     * @param tableName         destination table name 
+     * @param collection        collection, if configured
+     */
+    public static String[] addCollection(String[] tableNames, String collection) {
+        String[] result = new String[tableNames.length];
+        for (int i=0; i<tableNames.length; i++) {
+            result[i] = addCollection(tableNames[i], collection);
+        }
+        return result;
+    }
+    
+        
 }

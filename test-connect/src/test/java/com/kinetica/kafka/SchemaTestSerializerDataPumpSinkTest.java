@@ -14,6 +14,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import com.gpudb.GPUdb;
+import com.gpudb.GPUdbException;
 import com.gpudb.protocol.ShowTableResponse;
 import com.kinetica.kafka.data.utils.SchemaRegistryUtils;
 import com.kinetica.kafka.utils.ConnectorConfigHelper;
@@ -40,11 +41,16 @@ public class SchemaTestSerializerDataPumpSinkTest {
         for (int i = 0; i < 6; i++) {
             tables[i] = "test" + (i+1) + TOPIC;
         }
-        ConnectorConfigHelper.tableCleanUp(this.gpudb, tables);
+        ConnectorConfigHelper.tableCleanUp(this.gpudb, ConnectorConfigHelper.addCollection(tables, COLLECTION));
     }
     
     @After
-    public void cleanup() {
+    public void cleanup() throws GPUdbException {
+        String[] tables = new String[6];
+        for (int i = 0; i < 6; i++) {
+            tables[i] = "test" + (i+1) + TOPIC;
+        }
+        ConnectorConfigHelper.tableCleanUp(this.gpudb, ConnectorConfigHelper.addCollection(tables, COLLECTION));
         this.gpudb = null;
     }
     
@@ -66,11 +72,11 @@ public class SchemaTestSerializerDataPumpSinkTest {
         runSinkTask(task, TOPIC, new int[] {1, 2});
         Thread.sleep(1000);
         
-        boolean tableExists = gpudb.hasTable(prefix+TOPIC, null).getTableExists(); 
+        boolean tableExists = gpudb.hasTable(ConnectorConfigHelper.addCollection(prefix+TOPIC, COLLECTION), null).getTableExists(); 
         assertTrue(tableExists);
 
         // expect table size to match number of Kafka messages generated/ingested
-        ShowTableResponse response = gpudb.showTable(prefix+TOPIC, tableSizeProps);        
+        ShowTableResponse response = gpudb.showTable(ConnectorConfigHelper.addCollection(prefix+TOPIC, COLLECTION), tableSizeProps);        
         int size = response.getFullSizes().get(0).intValue();
         assertEquals(size, batch_size*2);
         
@@ -97,11 +103,11 @@ public class SchemaTestSerializerDataPumpSinkTest {
         runSinkTask(task, TOPIC, new int[] {1, 2});
         Thread.sleep(1000);
         
-        boolean tableExists = gpudb.hasTable(prefix+TOPIC, null).getTableExists(); 
+        boolean tableExists = gpudb.hasTable(ConnectorConfigHelper.addCollection(prefix+TOPIC, COLLECTION), null).getTableExists(); 
         assertTrue(tableExists);
 
         // expect table size to match number of Kafka messages generated/ingested
-        ShowTableResponse response = gpudb.showTable(prefix+TOPIC, tableSizeProps);        
+        ShowTableResponse response = gpudb.showTable(ConnectorConfigHelper.addCollection(prefix+TOPIC, COLLECTION), tableSizeProps);        
         int size = response.getFullSizes().get(0).intValue();
         assertEquals(size, batch_size*2);
         
@@ -128,11 +134,11 @@ public class SchemaTestSerializerDataPumpSinkTest {
         runSinkTask(task, TOPIC, new int[] {3, 1});
         Thread.sleep(1000);
         
-        boolean tableExists = gpudb.hasTable(prefix+TOPIC, null).getTableExists(); 
+        boolean tableExists = gpudb.hasTable(ConnectorConfigHelper.addCollection(prefix+TOPIC, COLLECTION), null).getTableExists(); 
         assertTrue(tableExists);
 
         // expect table size to match number of Kafka messages generated/ingested
-        ShowTableResponse response = gpudb.showTable(prefix+TOPIC, tableSizeProps);        
+        ShowTableResponse response = gpudb.showTable(ConnectorConfigHelper.addCollection(prefix+TOPIC, COLLECTION), tableSizeProps);        
         int size = response.getFullSizes().get(0).intValue();
         assertEquals(size, batch_size*2);
         
@@ -159,11 +165,11 @@ public class SchemaTestSerializerDataPumpSinkTest {
         runSinkTask(task, TOPIC, new int[] {1, 4});
         Thread.sleep(1000);
         
-        boolean tableExists = gpudb.hasTable(prefix+TOPIC, null).getTableExists(); 
+        boolean tableExists = gpudb.hasTable(ConnectorConfigHelper.addCollection(prefix+TOPIC, COLLECTION), null).getTableExists(); 
         assertTrue(tableExists);
 
         // expect table size to match number of Kafka messages generated/ingested
-        ShowTableResponse response = gpudb.showTable(prefix+TOPIC, tableSizeProps);        
+        ShowTableResponse response = gpudb.showTable(ConnectorConfigHelper.addCollection(prefix+TOPIC, COLLECTION), tableSizeProps);        
         int size = response.getFullSizes().get(0).intValue();
         assertEquals(size, batch_size*2);
         
@@ -190,11 +196,11 @@ public class SchemaTestSerializerDataPumpSinkTest {
         runSinkTask(task, TOPIC, new int[] {4, 3});
         Thread.sleep(1000);
         
-        boolean tableExists = gpudb.hasTable(prefix+TOPIC, null).getTableExists(); 
+        boolean tableExists = gpudb.hasTable(ConnectorConfigHelper.addCollection(prefix+TOPIC, COLLECTION), null).getTableExists(); 
         assertTrue(tableExists);
 
         // expect table size to match number of Kafka messages generated/ingested
-        ShowTableResponse response = gpudb.showTable(prefix+TOPIC, tableSizeProps);        
+        ShowTableResponse response = gpudb.showTable(ConnectorConfigHelper.addCollection(prefix+TOPIC, COLLECTION), tableSizeProps);        
         int size = response.getFullSizes().get(0).intValue();
         assertEquals(size, batch_size*2);
         
@@ -221,11 +227,11 @@ public class SchemaTestSerializerDataPumpSinkTest {
         runSinkTask(task, TOPIC, new int[] {4, 0});
         Thread.sleep(1000);
         
-        boolean tableExists = gpudb.hasTable(prefix+TOPIC, null).getTableExists(); 
+        boolean tableExists = gpudb.hasTable(ConnectorConfigHelper.addCollection(prefix+TOPIC, COLLECTION), null).getTableExists(); 
         assertTrue(tableExists);
 
         // expect table size to match number of Kafka messages generated/ingested
-        ShowTableResponse response = gpudb.showTable(prefix+TOPIC, tableSizeProps);        
+        ShowTableResponse response = gpudb.showTable(ConnectorConfigHelper.addCollection(prefix+TOPIC, COLLECTION), tableSizeProps);        
         int size = response.getFullSizes().get(0).intValue();
         assertEquals(size, batch_size);
         

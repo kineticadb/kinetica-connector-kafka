@@ -16,6 +16,7 @@ import org.apache.kafka.common.utils.AppInfoParser;
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.SchemaBuilder;
 import org.apache.kafka.connect.source.SourceRecord;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -30,6 +31,7 @@ import com.gpudb.protocol.CreateTableRequest;
 public class KineticaSourceTaskTest {
     private final static Logger LOG = LoggerFactory.getLogger(KineticaSourceTaskTest.class);
 
+    private GPUdb gpudb;
     private final static String TOPIC = "topic";
     private final static String TABLE = "table";
     private final static String COLLECTION = "TEST";
@@ -57,24 +59,26 @@ public class KineticaSourceTaskTest {
         
         String gpudbURL = config.get(KineticaSourceConnectorConfig.PARAM_URL);
         String tableName = config.get(KineticaSourceConnectorConfig.PARAM_TABLE_NAMES);
-        GPUdb gpudb = new GPUdb(gpudbURL, new GPUdb.Options()
+        this.gpudb = new GPUdb(gpudbURL, new GPUdb.Options()
                 .setUsername(config.get(KineticaSourceConnectorConfig.PARAM_USERNAME))
                 .setPassword(config.get(KineticaSourceConnectorConfig.PARAM_PASSWORD))
                 .setTimeout(0));
-        if (gpudb.hasTable(tableName, null).getTableExists()) {
-            LOG.info("Dropping table: {}", tableName);
-            gpudb.clearTable(tableName, null, null);
-        }
+        TestUtils.tableCleanUp(this.gpudb, tableName);
 
-        String typeId = RecordObject.createType(TweetRecord.class, gpudb);
+        String typeId = RecordObject.createType(TweetRecord.class, this.gpudb);
 
         LOG.info("Creating table: {}", tableName);
-        Map<String, String> options = 
-        		GPUdbBase.options(CreateTableRequest.Options.COLLECTION_NAME, COLLECTION);
-        gpudb.createTable(tableName, typeId, options);
-
+        this.gpudb.createTable(tableName, typeId, null);
+        
     }
-     
+    
+    @After
+    public void cleanup() throws Exception {
+    	String tableName = config.get(KineticaSourceConnectorConfig.PARAM_TABLE_NAMES);
+        TestUtils.tableCleanUp(this.gpudb, tableName);    	
+    	this.gpudb = null;
+    }
+    
     @Test
     public void startPollStopTaskTest() throws InterruptedException {
         KineticaSourceConnector sourceConnector = new KineticaSourceConnector();
