@@ -3,19 +3,17 @@ package com.kinetica.kafka;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
-import java.io.FileReader;
-import java.io.Reader;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Properties;
 
 import org.apache.kafka.common.utils.AppInfoParser;
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.SchemaBuilder;
 import org.apache.kafka.connect.sink.SinkRecord;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -51,6 +49,13 @@ public class KineticaSinkTaskTest {
         
     }
 
+    @After
+    public void cleanup() throws Exception {
+    	TestUtils.tableCleanUp(this.config.get(KineticaSinkConnectorConfig.PARAM_SCHEMA) + "." + 
+    			this.config.get(KineticaSinkConnectorConfig.PARAM_TABLE_PREFIX) + TABLE);
+    }
+    
+    
     @Test
     public void startPutFlushJSONTest() throws Exception {
         KineticaSinkTask task = new KineticaSinkTask();
@@ -67,7 +72,6 @@ public class KineticaSinkTaskTest {
         
         task.stop();  
         
-        TestUtils.tableCleanUp(TABLE);
     }
     
     /**

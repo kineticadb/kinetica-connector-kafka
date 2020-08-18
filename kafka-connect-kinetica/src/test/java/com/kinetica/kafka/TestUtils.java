@@ -3,7 +3,6 @@ package com.kinetica.kafka;
 import java.io.FileReader;
 import java.io.Reader;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Properties;
 
@@ -11,11 +10,16 @@ import org.apache.kafka.connect.errors.ConnectException;
 
 import com.gpudb.GPUdb;
 import com.gpudb.GPUdbException;
+import com.gpudb.protocol.HasSchemaResponse;
 
 public class TestUtils {
     private final static String DEFAULT_COLLECTION = "ki_home";
     private final static String CFG_PATH = "config/quickstart-kinetica-sink.properties";
 
+    /**
+     * Helper function used to create a GPUdb instance off default configuration file
+     * @throws Exception
+     */    
     public static GPUdb getGPUdb() throws Exception {
     	Properties props = new Properties();
         try (Reader propsReader = new FileReader(CFG_PATH)) {
@@ -39,13 +43,14 @@ public class TestUtils {
     }
 
     /**
-     * Helper function used to cleanup a list of KINETICA tables (either default tablenames, or prefixed with PREFIX)
-     * @param prefixed    Flag notifying that table name was manipulated
+     * Helper function used to cleanup a KINETICA table
+     * @param gpudb        GPUdb instance
+     * @param tableName    table name to clear
      * @throws Exception
      */    
     public static void tableCleanUp(GPUdb gpudb, String tableName) throws Exception {
     	
-        String schemaName = null;
+    	String schemaName = null;
         // Kinetica table cleanup before running data ingest
         if(gpudb.hasTable(tableName, null).getTableExists()) {
             if (tableName.contains(".")) {
@@ -57,7 +62,7 @@ public class TestUtils {
         // Do not attempt to remove default collection
     	if (schemaName != null && !DEFAULT_COLLECTION.equalsIgnoreCase(schemaName) 
     			&& gpudb.hasSchema(schemaName, null).getSchemaExists()) {
-        	try {
+    	    try {
             	com.gpudb.protocol.ShowSchemaResponse resp = gpudb.showSchema(schemaName, null);
             	// Schema is dropped only if there are no tables within
             	if(resp.getSchemaTables() != null && resp.getSchemaTables().size() == 1 
@@ -69,6 +74,30 @@ public class TestUtils {
             }
     	}
     }
+    
+    /**
+     * Helper function used to verify that table name has schema prefix and schema exists prior 
+     * to creating a table within it
+     * @param gpudb        GPUdb instance
+     * @param tableName    table name to check
+     * @throws Exception
+     */    
+    public static void verifySchema(GPUdb gpudb, String tableName) throws Exception {
+    	if (tableName.contains(".")) {
+            // Extract table schema
+            String schemaName = tableName.split("[.]")[0];
+            if (schemaName != null && !gpudb.hasSchema(schemaName, null).getSchemaExists()) {
+        	    // Create table if does not exist
+        		gpudb.createSchema(schemaName, null);
+            }
+        }
+    }
+    
+    /**
+     * Helper function used to cleanup a KINETICA table
+     * @param tableName    table name to clear
+     * @throws Exception
+     */      
     public static void tableCleanUp(String tableName) throws Exception {
     	GPUdb gpudb = getGPUdb();
     	tableCleanUp(gpudb, tableName);

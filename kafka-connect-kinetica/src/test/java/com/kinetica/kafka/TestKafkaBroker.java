@@ -6,6 +6,8 @@ import com.gpudb.GPUdbBase;
 import com.gpudb.RecordObject;
 import com.gpudb.Type;
 import com.gpudb.protocol.CreateTableRequest;
+import com.gpudb.protocol.CreateTypeRequest;
+import com.gpudb.protocol.InsertRecordsRequest;
 
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.sink.SinkRecord;
@@ -13,6 +15,7 @@ import org.apache.kafka.connect.sink.SinkTask;
 import org.apache.kafka.connect.source.SourceRecord;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -52,12 +55,18 @@ public class TestKafkaBroker {
         this.sinkConfig = getConfig("config/quickstart-kinetica-sink.properties");
         this.sinkConfig.put(SinkTask.TOPICS_CONFIG, TOPICS);
         this.sinkConfig.put(KineticaSinkConnectorConfig.DEPRECATED_PARAM_COLLECTION, COLLECTION_NAME);
+        String gpudbURL = this.sourceConfig.get(KineticaSourceConnectorConfig.PARAM_URL);
+        this.gpudb = new GPUdb(gpudbURL, new GPUdb.Options()
+                .setUsername(sourceConfig.get(KineticaSourceConnectorConfig.PARAM_USERNAME))
+                .setPassword(sourceConfig.get(KineticaSourceConnectorConfig.PARAM_PASSWORD))
+                .setTimeout(0));
     }
 
     @After
     public void cleanup() throws Exception {
-    	//TestUtils.tableCleanUp(this.gpudb, "TEST.outtableA");
-    	//TestUtils.tableCleanUp(this.gpudb, "TEST.tableA");
+    	TestUtils.tableCleanUp(this.gpudb, this.sinkConfig.get(KineticaSinkConnectorConfig.PARAM_SCHEMA) + "." + 
+    			this.sinkConfig.get(KineticaSinkConnectorConfig.PARAM_TABLE_PREFIX) + TABLES);
+    	TestUtils.tableCleanUp(this.gpudb, this.sinkConfig.get(KineticaSinkConnectorConfig.PARAM_SCHEMA) + "." + TABLES);
     	this.gpudb = null;
     }
 
@@ -116,25 +125,19 @@ public class TestKafkaBroker {
     public void createSourceTable() throws Exception {
 
         try {
-            String gpudbURL = this.sourceConfig.get(KineticaSourceConnectorConfig.PARAM_URL);
             String tableName = sourceConfig.get(KineticaSourceConnectorConfig.PARAM_TABLE_NAMES);
-
-            this.gpudb = new GPUdb(gpudbURL, new GPUdb.Options()
-                    .setUsername(sourceConfig.get(KineticaSourceConnectorConfig.PARAM_USERNAME))
-                    .setPassword(sourceConfig.get(KineticaSourceConnectorConfig.PARAM_PASSWORD))
-                    .setTimeout(0));
-
-            if (gpudb.hasTable(tableName, null).getTableExists()) {
+            if (this.gpudb.hasTable(tableName, null).getTableExists()) {
                 LOG.info("Dropping table: {}", tableName);
-                gpudb.clearTable(tableName, null, null);
+                this.gpudb.clearTable(tableName, null, null);
             }
 
-            String typeId = RecordObject.createType(TweetRecord.class, gpudb);
-
+            String typeId = RecordObject.createType(TweetRecord.class, this.gpudb);
+            
             LOG.info("Creating table: {}", tableName);
+            TestUtils.verifySchema(this.gpudb, tableName);
             Map<String, String> options = GPUdbBase.options(CreateTableRequest.Options.COLLECTION_NAME,
                     COLLECTION_NAME);
-            gpudb.createTable(tableName, typeId, options);
+            this.gpudb.createTable(tableName, typeId, options);
 
             LOG.info("Done!");
         } catch (Exception ex) {
@@ -227,22 +230,25 @@ public class TestKafkaBroker {
      */
     public void insertTableRecs(Map<String, String> sourceConfig, long numRecs) throws Exception {
 
-        String gpudbURL = sourceConfig.get(KineticaSourceConnectorConfig.PARAM_URL);
         String tableName = sourceConfig.get(KineticaSourceConnectorConfig.PARAM_TABLE_NAMES);
-        GPUdb gpudb = new GPUdb(gpudbURL, new GPUdb.Options()
-                .setUsername(sourceConfig.get(KineticaSourceConnectorConfig.PARAM_USERNAME))
-                .setPassword(sourceConfig.get(KineticaSourceConnectorConfig.PARAM_PASSWORD))
-                .setTimeout(0));
 
-        LOG.info("Generating {} records ", numRecs);
+        LOG.info("Generating {} records for {}", numRecs, tableName);
         ArrayList<TweetRecord> records = new ArrayList<>();
         for (int recNum = 0; recNum < numRecs; recNum++) {
             records.add(TweetRecord.generateRandomRecord());
         }
-
-        LOG.info("Inserting records.");
+        TestUtils.verifySchema(this.gpudb, tableName);
+        LOG.info("Inserting records into table " + tableName);
         Type recordtype = RecordObject.getType(TweetRecord.class);
-        BulkInserter<TweetRecord> bulkInserter = new BulkInserter<>(gpudb, tableName, recordtype, 100, null);
+        
+        if (!this.gpudb.hasTable(tableName, null).getTableExists()) {
+	    String typeId = recordtype.create(this.gpudb);
+
+	    HashMap<String,String> options = new HashMap<>();
+	    options.put(CreateTableRequest.Options.NO_ERROR_IF_EXISTS, CreateTableRequest.Options.TRUE);
+	    this.gpudb.createTable(tableName, typeId, null);
+        }
+        BulkInserter<TweetRecord> bulkInserter = new BulkInserter<>(this.gpudb, tableName, recordtype, 100, null);
         bulkInserter.insert(records);
         bulkInserter.flush();
 

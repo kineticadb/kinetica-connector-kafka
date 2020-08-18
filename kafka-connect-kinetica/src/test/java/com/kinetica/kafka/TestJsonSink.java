@@ -38,8 +38,10 @@ public class TestJsonSink {
     @After
     public void cleanup() throws Exception {
     	GPUdb gpudb = TestUtils.getGPUdb();
-    	TestUtils.tableCleanUp(gpudb, "outRX_TX_FIN_EVENT");
-    	TestUtils.tableCleanUp(gpudb, "outTX_TP_FIN_EVENT");
+    	TestUtils.tableCleanUp(gpudb, this.sinkConfig.get(KineticaSinkConnectorConfig.PARAM_SCHEMA) + "." + 
+    			this.sinkConfig.get(KineticaSinkConnectorConfig.PARAM_TABLE_PREFIX) + "RX_TX_FIN_EVENT");
+    	TestUtils.tableCleanUp(gpudb, this.sinkConfig.get(KineticaSinkConnectorConfig.PARAM_SCHEMA) + "." + 
+    			this.sinkConfig.get(KineticaSinkConnectorConfig.PARAM_TABLE_PREFIX) +"TX_TP_FIN_EVENT");
     	gpudb = null;
     }
 

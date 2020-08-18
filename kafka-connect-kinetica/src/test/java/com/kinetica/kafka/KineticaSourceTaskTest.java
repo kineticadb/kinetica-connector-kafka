@@ -18,15 +18,12 @@ import org.apache.kafka.connect.data.SchemaBuilder;
 import org.apache.kafka.connect.source.SourceRecord;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.gpudb.GPUdb;
-import com.gpudb.GPUdbBase;
 import com.gpudb.RecordObject;
-import com.gpudb.protocol.CreateTableRequest;
 
 public class KineticaSourceTaskTest {
     private final static Logger LOG = LoggerFactory.getLogger(KineticaSourceTaskTest.class);
@@ -64,6 +61,7 @@ public class KineticaSourceTaskTest {
                 .setPassword(config.get(KineticaSourceConnectorConfig.PARAM_PASSWORD))
                 .setTimeout(0));
         TestUtils.tableCleanUp(this.gpudb, tableName);
+        TestUtils.verifySchema(this.gpudb, tableName);
 
         String typeId = RecordObject.createType(TweetRecord.class, this.gpudb);
 
