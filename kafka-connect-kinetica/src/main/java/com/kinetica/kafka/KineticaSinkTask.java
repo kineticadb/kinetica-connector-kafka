@@ -434,8 +434,11 @@ public class KineticaSinkTask extends SinkTask {
             outValue = inValue;
         }
         else if(Number.class.isAssignableFrom(inType)) {
-            // convert numbers
             Number inNumber = (Number)inValue;
+            if (outType == String.class) {
+                outValue = inNumber.toString();
+            } else 
+            // convert numbers
             if(outType == Long.class) {
                 outValue = inNumber.longValue();
             }
@@ -451,9 +454,15 @@ public class KineticaSinkTask extends SinkTask {
             else if(outType == String.class && column.getProperties().contains("datetime")) {
                 outValue = tsFormatter.format(new Date(inNumber.longValue()));
             }
-            else {
+            else if(outType == String.class) {
+                try {
+                    outValue = String.valueOf(inValue);
+                } catch (Exception e) {
+                    throw new ConnectException("Failed to convert incoming number to string.", e);
+                }
+            } else {
                 throw new ConnectException(String.format("Could not convert numeric type: %s -> %s",
-                            inType.getName(), outType.getName()));
+                    inType.getName(), outType.getName()));
             }
         }
         else if(inValue instanceof String && column.getProperties().contains("timestamp")) {
@@ -475,15 +484,19 @@ public class KineticaSinkTask extends SinkTask {
             // convert serialized bytes
             outValue = ByteBuffer.wrap((byte[])inValue);
         }
-        else if(inValue instanceof Boolean && outType == String.class) {
-            // converted boolean data to String
-            outValue = inValue.toString();
+        else if(inValue instanceof Boolean) {
+            if (outType == String.class) {
+                // converted boolean data to String
+                outValue = inValue.toString();
+            } else {
+                // convert boolean data to int
+                outValue = (Boolean) inValue == true ? 1 : 0;
+            }
         }
         else {
-            throw new ConnectException(String.format("Type mismatch. Expected %s but got %s.",
-                    outType.getSimpleName(), inType.getSimpleName()));
+            throw new ConnectException(String.format("Type mismatch. Expected %s but got %s. Failed value is '%s'.",
+                    outType.getSimpleName(), inType.getSimpleName(), inValue.toString()));
         }
-
         return outValue;
     }
 

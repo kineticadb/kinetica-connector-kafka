@@ -2,6 +2,13 @@
 
 ## Version 7.1
 
+### Version 7.1.1.0 -- 2020-08-25
+
+#### Added
+
+-   `kinetica.enable_multihead` option to turn on
+    multihead data ingest for Sink Connector (default true).
+
 ### Version 7.1.0.0 -- 2020-05-27
 
 #### Changed
@@ -28,6 +35,12 @@
 
 
 ## Version 7.0
+
+### Version 7.0.2.0 -- 2020-04-28
+
+#### Updated
+
+-   Kafka version support to 2.4.1 version.
 
 ### Version 7.0.1.3 -- 2019-05-07
 

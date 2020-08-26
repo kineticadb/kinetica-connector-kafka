@@ -55,6 +55,7 @@ version, edit `pom.xml` project properties to build connector compatible with yo
 | 5.0.x | 2.0.x | 1.8.0_60 |
 | 5.1.x | 2.1.x | 1.8.0_60 |
 | 5.2.x | 2.2.x | 1.8.0_60 |
+| 5.4.1 | 2.4.1 | 1.8.0_60 |
 
 Clone and build the project as follows:
 
@@ -74,9 +75,18 @@ mvn clean compile package
 
 Three JAR files are produced by the Maven build in `kinetica-connector-kafka/target/`:
 
-* `kafka-<ver>-connector-kinetica-<ver>.jar` - default JAR (not for use)
-* `kafka-<ver>-connector-kinetica-<ver>-tests.jar` - tests JAR (see below how to use it to test connectivity)
-* `kafka-<ver>-connector-kinetica-<ver>-jar-with-dependencies.jar` - complete connector JAR
+* `kafka-<kafka_version>-connector-kinetica-<kinetica_version>.jar` - default JAR (not for use)
+* `kafka-<kafka_version>-connector-kinetica-<kinetica_version>-tests.jar` - tests JAR (see below how to use it to test connectivity)
+* `kafka-<kafka_version>-connector-kinetica-<kinetica_version>-jar-with-dependencies.jar` - complete connector JAR
+
+where `<kafka_version>` and `<kinetica_version>` are configured in `pom.xml` *properties*:
+
+```xml
+    <properties>
+        <gpudb-api.version>[<kinetica_version>,7.2.0.0-SNAPSHOT)</gpudb-api.version>
+        <kafka.version><kafka_version></kafka.version>
+    </properties>
+```
 
 ## Kinetica Kafka Connector Plugin
 
@@ -91,7 +101,7 @@ A Kafka Connect plugin is either:
 dependencies in a single JAR file; see
 
 ```bash
-kinetica-connector-kafka/kafka-connect-kinetica/target/kafka-<ver>-connector-kinetica-<ver>-jar-with-dependencies.jar
+kinetica-connector-kafka/kafka-connect-kinetica/target/kafka-<kafka_version>-connector-kinetica-<kinetica_version>-jar-with-dependencies.jar
 ```
 
 OR
@@ -99,7 +109,7 @@ OR
 its third-party dependencies, see
 
 ```bash
-kinetica-connector-kafka/kafka-connect-kinetica/target/kafka-<ver>-connector-kinetica-<ver>-package
+kinetica-connector-kafka/kafka-connect-kinetica/target/kafka-<kafka_version>-connector-kinetica-<kinetica_version>-package
 |-- etc
     |-- kafka-connect-kinetica
         |-- quickstart-kinetica-sink.properties
@@ -117,7 +127,7 @@ kinetica-connector-kafka/kafka-connect-kinetica/target/kafka-<ver>-connector-kin
     |-- java
         |-- kafka-connect-kinetica
             |-- ...
-            |-- kafka-connect-kinetica-<ver>.jar
+            |-- kafka-connect-kinetica-<kinetica_version>.jar
             |-- ...
             |-- xz-1.5.jar
 ```
@@ -126,7 +136,7 @@ kinetica-connector-kafka/kafka-connect-kinetica/target/kafka-<ver>-connector-kin
 ### Installing Kinetica Kafka Connector on plain Kafka stack
 
 To install the connector at the target server location for plain **Kafka**, copy the uber JAR
-`kafka-<ver>-connector-kinetica-<ver>-jar-with-dependencies.jar` into `KAFKA_HOME/libs/` folder and make
+`kafka-<kafka_version>-connector-kinetica-<kinetica_version>-jar-with-dependencies.jar` into `KAFKA_HOME/libs/` folder and make
 sure configuration in `KAFKA_HOME/config/connect-distributed.properties` and
 `KAFKA_HOME/config/connect-standalone.properties` files matches the configuration you've tested
 with your Kafka connector. Any additional properties files you might
@@ -135,17 +145,17 @@ need should go in the same folder `KAFKA_HOME/config/`.
 ### Installing Kinetica Kafka Connector on Confluent platform
 
 To install the connector at the target server location for **Confluent** platform, check the project
-target folder it should contain the artifact folder `kafka-<ver>-connector-kinetica-<ver>-package`
+target folder it should contain the artifact folder `kafka-<kafka_version>-connector-kinetica-<kinetica_version>-package`
 Follow the same directory structure you find in the build artifact and copy files into CONFLUENT_HOME
 directories:
 
 ```sh
 mkdir /CONFLUENT_HOME/share/java/kafka-connect-kinetica
-cp target/kafka-<ver>-connector-kinetica-<ver>-package/share/java/* /CONFLUENT_HOME/share/java/kafka-connect-kinetica/
+cp target/kafka-<kafka_version>-connector-kinetica-<kinetica_version>-package/share/java/* /CONFLUENT_HOME/share/java/kafka-connect-kinetica/
 mkdir /CONFLUENT_HOME/etc/kafka-connect-kinetica
-cp target/kafka-<ver>-connector-kinetica-<ver>-package/etc/* /CONFLUENT_HOME/etc/kafka-connect-kinetica/
+cp target/kafka-<kafka_version>-connector-kinetica-<kinetica_version>-package/etc/* /CONFLUENT_HOME/etc/kafka-connect-kinetica/
 mkdir /CONFLUENT_HOME/share/doc/kafka-connect-kinetica
-cp target/kafka-<ver>-connector-kinetica-<ver>-package/share/doc/* /CONFLUENT_HOME/share/doc/kafka-connect-kinetica/
+cp target/kafka-<kafka_version>-connector-kinetica-<kinetica_version>-package/share/doc/* /CONFLUENT_HOME/share/doc/kafka-connect-kinetica/
 ```
 
 > Instead of copying multiple jars into `/CONFLUENT_HOME/share/java/kafka-connect-kinetica/` you can copy the uber JAR.
@@ -431,6 +441,7 @@ that accepts the following parameters:
 | `kinetica.username`| N | Username for authentication |
 | `kinetica.password`| N | Password for authentication |
 | `kinetica.timeout`| N | Timeout in milliseconds (default = 1000) |
+| `kinetica.enable_multihead`| N | Automatically enable multihead ingest (default = true) |
 | `kinetica.retry_count`| N | Number of attempts to insert data before task fails. (default = 1) |
 | `kinetica.batch_size`| N | The number of records to insert at one time (default = 10000) |
 | `kinetica.tables.create_table`| N | Automatically create missing table. (default = true) |
