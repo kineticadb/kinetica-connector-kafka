@@ -4,7 +4,7 @@
 
     <groupId>com.kinetica</groupId>
     <artifactId>kafka-connect-kinetica</artifactId>
-    <version>7.1.0.0</version>
+    <version>7.1.1.0</version>
     <packaging>jar</packaging>
 
     <name>Kafka Connector for Kinetica DB</name>
@@ -15,7 +15,7 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <maven-jar-plugin.version>3.0.2</maven-jar-plugin.version>        
+        <maven-jar-plugin.version>3.0.2</maven-jar-plugin.version>
         <gpudb-api.version>[7.1.0.0,7.2.0.0-SNAPSHOT)</gpudb-api.version>
         <java.version>1.7</java.version>
         <zeromq.version>0.3.5</zeromq.version>
@@ -52,7 +52,7 @@
             <url>http://packages.confluent.io/maven/</url>
         </repository>
     </repositories>
-    
+
 
     <dependencies>
 
@@ -90,7 +90,7 @@
                 </exclusion>
              </exclusions>
          </dependency>
-        
+
 
         <!-- Test scope -->
         <dependency>
@@ -158,10 +158,10 @@
                         <source>${java.version}</source>
                         <target>${java.version}</target>
                     </configuration>
-                </plugin>            
+                </plugin>
             </plugins>
         </pluginManagement>
-        
+
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -177,7 +177,7 @@
                     </archive>
                     <descriptorRefs>
                         <descriptorRef>jar-with-dependencies</descriptorRef>
-                    </descriptorRefs>                    
+                    </descriptorRefs>
                 </configuration>
                 <executions>
                     <execution>
@@ -198,7 +198,7 @@
                             <archive>
                                 <manifest>
                                     <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
-                                    <addDefaultSpecificationEntries>true</addDefaultSpecificationEntries>                                
+                                    <addDefaultSpecificationEntries>true</addDefaultSpecificationEntries>
                                 </manifest>
                             </archive>
                             <descriptors>
@@ -206,7 +206,7 @@
                             </descriptors>
                             <descriptorRefs>
                                 <descriptorRef>jar-with-dependencies</descriptorRef>
-                            </descriptorRefs>                    
+                            </descriptorRefs>
                         </configuration>
                         <phase>package</phase>
                         <goals>

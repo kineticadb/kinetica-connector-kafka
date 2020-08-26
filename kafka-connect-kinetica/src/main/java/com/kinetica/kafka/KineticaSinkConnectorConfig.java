@@ -15,12 +15,13 @@ public class KineticaSinkConnectorConfig extends AbstractConfig {
     private static final Logger LOGGER = LoggerFactory.getLogger(KineticaSinkConnectorConfig.class);
 
     // config params
-    public static final String PARAM_URL         = "kinetica.url";
-    public static final String PARAM_USERNAME    = "kinetica.username";
-    public static final String PARAM_PASSWORD    = "kinetica.password";
-    public static final String PARAM_TIMEOUT     = "kinetica.timeout";
-    public static final String PARAM_RETRY_COUNT = "kinetica.retry_count";
-    public static final String PARAM_BATCH_SIZE  = "kinetica.batch_size";
+    public static final String PARAM_URL               = "kinetica.url";
+    public static final String PARAM_USERNAME          = "kinetica.username";
+    public static final String PARAM_PASSWORD          = "kinetica.password";
+    public static final String PARAM_TIMEOUT           = "kinetica.timeout";
+    public static final String PARAM_ENABLE_MULTI_HEAD = "kinetica.enable_multihead";
+    public static final String PARAM_RETRY_COUNT       = "kinetica.retry_count";
+    public static final String PARAM_BATCH_SIZE        = "kinetica.batch_size";
     
     public static final String DEPRECATED_PARAM_COLLECTION                   = "kinetica.collection_name";
     public static final String DEPRECATED_PARAM_DEST_TABLE_OVERRIDE          = "kinetica.dest_table_override";
@@ -59,10 +60,16 @@ public class KineticaSinkConnectorConfig extends AbstractConfig {
     protected KineticaSinkConnectorConfig(ConfigDef config, Map<String, String> props) {
         super(config, props);
         connectorName = props.containsKey("name") ? props.get("name") : UUID.randomUUID().toString();
-        if (!validateOverride(props.get(SinkTask.TOPICS_CONFIG), props.get(PARAM_DEST_TABLE_OVERRIDE))) {
-            throw new ConnectException("Invalid configuration, expected exactly one destination table name per each topic name:\n" +
-                    PARAM_DEST_TABLE_OVERRIDE + "=" + props.get(PARAM_DEST_TABLE_OVERRIDE) + "\n" +
-                    SinkTask.TOPICS_CONFIG + "=" + props.get(SinkTask.TOPICS_CONFIG) + "\n" +
+        // Validate destination table override value
+        // When SinkConnector has a single_table_per_topic flag set, check the lengths of topics name list
+        // and destination table override names list, exit with error if list lengths differ
+        if ( new Boolean(props.get(PARAM_SINGLE_TABLE_PER_TOPIC)) &&
+            !validateOverride(props.get(SinkTask.TOPICS_CONFIG), props.get(PARAM_DEST_TABLE_OVERRIDE))) {
+            throw new ConnectException("Invalid configuration, with " +
+                    PARAM_SINGLE_TABLE_PER_TOPIC + " = " + props.get(PARAM_SINGLE_TABLE_PER_TOPIC) + "\n" +
+                    "expected exactly one destination table name per each topic name:\n" +
+                    PARAM_DEST_TABLE_OVERRIDE + " = " + props.get(PARAM_DEST_TABLE_OVERRIDE) + "\n" +
+                    SinkTask.TOPICS_CONFIG + " = " + props.get(SinkTask.TOPICS_CONFIG) + "\n" +
                     "Both parameters can be comma-separated lists of equal length or " + PARAM_DEST_TABLE_OVERRIDE + " can be left blank.");
         }
         if (!props.containsKey(PARAM_TABLE_PREFIX)) {
@@ -236,14 +243,18 @@ public class KineticaSinkConnectorConfig extends AbstractConfig {
                         "Schema evolution enabled for incoming Kafka messages. (optional, default false)", PARAM_GROUP, 14, ConfigDef.Width.SHORT,
                         "Schema evolution enabled")
 
-		        .define(DEPRECATED_PARAM_UPDATE_ON_EXISTING_PK, ConfigDef.Type.BOOLEAN, true, ConfigDef.Importance.LOW,
-		                "Allow update on existing PK when inserting Kafka messages. (deprecated, use " + PARAM_UPDATE_ON_EXISTING_PK + 
-		                " instead)", PARAM_GROUP, 15, ConfigDef.Width.SHORT,
-		                "Allow update on existing PK")
+                .define(DEPRECATED_PARAM_UPDATE_ON_EXISTING_PK, ConfigDef.Type.BOOLEAN, true, ConfigDef.Importance.LOW,
+                        "Allow update on existing PK when inserting Kafka messages. (deprecated, use " + PARAM_UPDATE_ON_EXISTING_PK + 
+                        " instead)", PARAM_GROUP, 15, ConfigDef.Width.SHORT,
+                        "Allow update on existing PK")
 
-		        .define(PARAM_UPDATE_ON_EXISTING_PK, ConfigDef.Type.BOOLEAN, true, ConfigDef.Importance.LOW,
-		                "Force update on existing PK when inserting Kafka messages. (optional, default true)", 
-		                PARAM_GROUP, 15, ConfigDef.Width.SHORT, "Force update on existing PK");
+                .define(PARAM_UPDATE_ON_EXISTING_PK, ConfigDef.Type.BOOLEAN, true, ConfigDef.Importance.LOW,
+                        "Force update on existing PK when inserting Kafka messages. (optional, default true)", 
+                        PARAM_GROUP, 15, ConfigDef.Width.SHORT, "Force update on existing PK")
+        
+                .define(PARAM_ENABLE_MULTI_HEAD, ConfigDef.Type.BOOLEAN, true, ConfigDef.Importance.LOW,
+                        "Allow multi-head data ingest. (optional, default true)", PARAM_GROUP, 16, ConfigDef.Width.SHORT,
+                        "Allow multi-head data ingest");
 
     }
 
