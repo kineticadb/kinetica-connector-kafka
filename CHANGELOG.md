@@ -2,6 +2,13 @@
 
 ## Version 7.0
 
+### Version 7.0.3.0 -- 2020-08-20
+
+#### Added
+
+-   `kinetica.enable_multihead` option to turn on
+    multihead data ingest for Sink Connector (default true).
+
 ### Version 7.0.2.0 -- 2020-04-28
 
 #### Added

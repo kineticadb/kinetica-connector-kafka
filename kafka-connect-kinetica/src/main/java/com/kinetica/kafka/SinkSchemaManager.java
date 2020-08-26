@@ -46,6 +46,7 @@ public class SinkSchemaManager {
     protected final String fieldNameDelimiter;
     protected final String arrayValueSeparator;
     protected final KineticaSinkConnectorConfig.ARRAY_FLATTENING arrayFlatteningMode;
+    protected final boolean multiHeadEnabled;
     private final int retryCount;
     
     private final HashMap<String, List<Integer>> knownSchemas = new HashMap<>();
@@ -109,6 +110,8 @@ public class SinkSchemaManager {
         } else {
             this.arrayFlatteningMode = KineticaSinkConnectorConfig.ARRAY_FLATTENING.CONVERT_TO_STRING;
         }
+        this.multiHeadEnabled = Boolean.parseBoolean(
+        		props.get(KineticaSinkConnectorConfig.PARAM_ENABLE_MULTI_HEAD) );
 
         String url = props.get(KineticaSinkConnectorConfig.PARAM_URL);
         try {
@@ -135,7 +138,13 @@ public class SinkSchemaManager {
         HashMap<String,String> options = new HashMap<>();
         options.put(InsertRecordsRequest.Options.UPDATE_ON_EXISTING_PK, 
                 (this.updateOnExistingPK ? InsertRecordsRequest.Options.TRUE : InsertRecordsRequest.Options.FALSE));
-        BulkInserter<GenericRecord> result = new BulkInserter<>(this.gpudb, tableName, gpudbSchema, this.batchSize, options);
+        BulkInserter<GenericRecord> result = null;
+        if (this.multiHeadEnabled) {
+            result = new BulkInserter<>(this.gpudb, tableName, gpudbSchema, this.batchSize, options, new com.gpudb.WorkerList(this.gpudb));     	
+        } else {
+            result = new BulkInserter<>(this.gpudb, tableName, gpudbSchema, this.batchSize, options);
+        }
+        
         result.setRetryCount(this.retryCount);
         return result;
     }
