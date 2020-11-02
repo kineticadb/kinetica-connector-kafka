@@ -2,6 +2,12 @@
 
 ## Version 7.0
 
+### Version 7.0.3.1 -- 2020-10-30
+
+#### Added
+
+-   Kafka v2.6 and Confluent v6.0.0-ce support.
+
 ### Version 7.0.3.0 -- 2020-08-20
 
 #### Added
@@ -28,6 +34,7 @@
     schema flattening (default ',').
 
 #### Updated
+
 -   Kafka version support to 2.4.1 version.
 
 ### Version 7.0.1.3 -- 2019-05-07
@@ -111,4 +118,3 @@ for different Kafka message formats and data ingest scenarios
 ### Version 5.2.0 -- 2016-07-08
 
 -   Initial version
-
