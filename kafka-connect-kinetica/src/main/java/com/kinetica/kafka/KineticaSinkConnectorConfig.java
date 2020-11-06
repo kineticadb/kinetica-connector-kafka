@@ -162,26 +162,13 @@ public class KineticaSinkConnectorConfig extends AbstractConfig {
                 .define(PARAM_PASSWORD, ConfigDef.Type.STRING, "", ConfigDef.Importance.MEDIUM,
                         "Kinetica password (optional)", PARAM_GROUP, 3, ConfigDef.Width.SHORT, "Password")
 
-                .define(DEPRECATED_PARAM_COLLECTION, ConfigDef.Type.STRING, "", ConfigDef.Importance.LOW,
-                        "Kinetica collection name (deprecated, use " + PARAM_SCHEMA + " instead)", PARAM_GROUP, 4,
-                        ConfigDef.Width.LONG, "Collection Name")
-
                 .define(PARAM_SCHEMA, ConfigDef.Type.STRING, "", ConfigDef.Importance.HIGH,
                         "Kinetica schema name (optional, default empty)", PARAM_GROUP, 4,
-                        ConfigDef.Width.LONG, "Collection Name")
-
-                .define(DEPRECATED_PARAM_TABLE_PREFIX, ConfigDef.Type.STRING, "", ConfigDef.Importance.LOW,
-                        "Prefix applied to tablenames from Kafka schema. (deprecated, use " + PARAM_TABLE_PREFIX + " instead)", 
-                        PARAM_GROUP, 5, ConfigDef.Width.LONG, "Table Prefix")
+                        ConfigDef.Width.LONG, "Schema Name")
 
                 .define(PARAM_TABLE_PREFIX, ConfigDef.Type.STRING, "", ConfigDef.Importance.HIGH,
                         "Prefix applied to tablenames from Kafka schema. (optional)", PARAM_GROUP, 5,
                         ConfigDef.Width.LONG, "Table Prefix")
-
-                .define(DEPRECATED_PARAM_DEST_TABLE_OVERRIDE, ConfigDef.Type.STRING, "", ConfigDef.Importance.LOW,
-                        "Table name that will replace name automatically generated from the schema. (deprecated, use " + 
-                        PARAM_DEST_TABLE_OVERRIDE + " instead)",
-                        PARAM_GROUP, 6, ConfigDef.Width.LONG, "Table Override")
 
                 .define(PARAM_DEST_TABLE_OVERRIDE, ConfigDef.Type.STRING, "", ConfigDef.Importance.HIGH,
                         "Table name that will replace name automatically generated from the schema. (optional)",
@@ -195,36 +182,18 @@ public class KineticaSinkConnectorConfig extends AbstractConfig {
                         ConfigDef.Importance.LOW, "Kinetica batch size (optional, default " + DEFAULT_BATCH_SIZE + ")",
                         PARAM_GROUP, 8, ConfigDef.Width.SHORT, "Batch Size")
 
-                .define(DEPRECATED_PARAM_CREATE_TABLE, ConfigDef.Type.BOOLEAN, true, ConfigDef.Importance.LOW,
-                        "Create missing tables. (deprecated, use " + PARAM_CREATE_TABLE + " instead)", PARAM_GROUP, 9, ConfigDef.Width.SHORT,
-                        "Create Table")
-
                 .define(PARAM_CREATE_TABLE, ConfigDef.Type.BOOLEAN, true, ConfigDef.Importance.LOW,
                         "Create missing tables. (optional, default true)", PARAM_GROUP, 9, ConfigDef.Width.SHORT,
                         "Create Table")
-
-                .define(DEPRECATED_PARAM_SINGLE_TABLE_PER_TOPIC, ConfigDef.Type.BOOLEAN, false, ConfigDef.Importance.LOW,
-                        "Creates a single kinetica table per each Kafka topic. (deprecated, use " + PARAM_SINGLE_TABLE_PER_TOPIC + " instead)",
-                        PARAM_GROUP, 10, ConfigDef.Width.SHORT, "Single table per topic")
 
                 .define(PARAM_SINGLE_TABLE_PER_TOPIC, ConfigDef.Type.BOOLEAN, false, ConfigDef.Importance.LOW,
                         "Creates a single kinetica table per each Kafka topic. (optional, default false)",
                         PARAM_GROUP, 10, ConfigDef.Width.SHORT, "Single table per topic")
 
-                .define(DEPRECATED_PARAM_ADD_NEW_FIELDS, ConfigDef.Type.BOOLEAN, false, ConfigDef.Importance.LOW,
-                        "Add new field names as columns to Kinetica table. (deprecated, use " + PARAM_ADD_NEW_FIELDS + 
-                        " instead)", PARAM_GROUP, 11, ConfigDef.Width.SHORT,
-                        "Add new columns")
-
                 .define(PARAM_ADD_NEW_FIELDS, ConfigDef.Type.BOOLEAN, false, ConfigDef.Importance.LOW,
                         "Add new field names as columns to Kinetica table. (optional, default false)",
                         PARAM_GROUP, 11, ConfigDef.Width.SHORT,
                         "Add new columns")
-
-                .define(DEPRECATED_PARAM_MAKE_MISSING_FIELDS_NULLABLE, ConfigDef.Type.BOOLEAN, false, ConfigDef.Importance.LOW,
-                        "Make missing from schema fields nullable columns in Kinetica table. (deprecated, use " + 
-                        PARAM_MAKE_MISSING_FIELDS_NULLABLE + " instead)", PARAM_GROUP, 12, ConfigDef.Width.SHORT,
-                        "Alter existing column to nullable")
 
                 .define(PARAM_MAKE_MISSING_FIELDS_NULLABLE, ConfigDef.Type.BOOLEAN, false, ConfigDef.Importance.LOW,
                         "Make missing from schema fields nullable columns in Kinetica table. (optional, default false)",
@@ -235,18 +204,9 @@ public class KineticaSinkConnectorConfig extends AbstractConfig {
                         ConfigDef.Importance.LOW, "Number of attempts to insert record into Kinetica table. (optional, default 1)",
                         PARAM_GROUP, 13, ConfigDef.Width.SHORT, "Retry count")
 
-                .define(DEPRECATED_PARAM_ALLOW_SCHEMA_EVOLUTION, ConfigDef.Type.BOOLEAN, false, ConfigDef.Importance.LOW,
-                        "Allow schema evolution for incoming Kafka messages. (deprecated, use " + DEPRECATED_PARAM_ALLOW_SCHEMA_EVOLUTION 
-                        + " instead)", PARAM_GROUP, 14, ConfigDef.Width.SHORT, "Allow schema evolution")
-
                 .define(PARAM_ALLOW_SCHEMA_EVOLUTION, ConfigDef.Type.BOOLEAN, false, ConfigDef.Importance.LOW,
                         "Schema evolution enabled for incoming Kafka messages. (optional, default false)", PARAM_GROUP, 14, ConfigDef.Width.SHORT,
                         "Schema evolution enabled")
-
-                .define(DEPRECATED_PARAM_UPDATE_ON_EXISTING_PK, ConfigDef.Type.BOOLEAN, true, ConfigDef.Importance.LOW,
-                        "Allow update on existing PK when inserting Kafka messages. (deprecated, use " + PARAM_UPDATE_ON_EXISTING_PK + 
-                        " instead)", PARAM_GROUP, 15, ConfigDef.Width.SHORT,
-                        "Allow update on existing PK")
 
                 .define(PARAM_UPDATE_ON_EXISTING_PK, ConfigDef.Type.BOOLEAN, true, ConfigDef.Importance.LOW,
                         "Force update on existing PK when inserting Kafka messages. (optional, default true)", 
@@ -254,7 +214,47 @@ public class KineticaSinkConnectorConfig extends AbstractConfig {
         
                 .define(PARAM_ENABLE_MULTI_HEAD, ConfigDef.Type.BOOLEAN, true, ConfigDef.Importance.LOW,
                         "Allow multi-head data ingest. (optional, default true)", PARAM_GROUP, 16, ConfigDef.Width.SHORT,
-                        "Allow multi-head data ingest");
+                        "Allow multi-head data ingest")
+                
+                .define(DEPRECATED_PARAM_COLLECTION, ConfigDef.Type.STRING, "", ConfigDef.Importance.LOW,
+                        "Kinetica collection name (deprecated, use " + PARAM_SCHEMA + " instead)", PARAM_GROUP, 17,
+                        ConfigDef.Width.LONG, String.format("%s (deprecated)", DEPRECATED_PARAM_COLLECTION))
+
+                .define(DEPRECATED_PARAM_TABLE_PREFIX, ConfigDef.Type.STRING, "", ConfigDef.Importance.LOW,
+                        "Prefix applied to tablenames from Kafka schema. (deprecated, use " + PARAM_TABLE_PREFIX + " instead)", 
+                        PARAM_GROUP, 18, ConfigDef.Width.LONG, String.format("%s (deprecated)", DEPRECATED_PARAM_TABLE_PREFIX))
+
+                .define(DEPRECATED_PARAM_DEST_TABLE_OVERRIDE, ConfigDef.Type.STRING, "", ConfigDef.Importance.LOW,
+                        "Table name that will replace name automatically generated from the schema. (deprecated, use " + 
+                        PARAM_DEST_TABLE_OVERRIDE + " instead)",
+                        PARAM_GROUP, 19, ConfigDef.Width.LONG, String.format("%s (deprecated)", DEPRECATED_PARAM_DEST_TABLE_OVERRIDE))
+
+                .define(DEPRECATED_PARAM_CREATE_TABLE, ConfigDef.Type.BOOLEAN, true, ConfigDef.Importance.LOW,
+                        "Create missing tables. (deprecated, use " + PARAM_CREATE_TABLE + " instead)", PARAM_GROUP, 20, ConfigDef.Width.SHORT,
+                        String.format("%s (deprecated)", DEPRECATED_PARAM_CREATE_TABLE))
+
+                .define(DEPRECATED_PARAM_SINGLE_TABLE_PER_TOPIC, ConfigDef.Type.BOOLEAN, false, ConfigDef.Importance.LOW,
+                        "Creates a single kinetica table per each Kafka topic. (deprecated, use " + PARAM_SINGLE_TABLE_PER_TOPIC + " instead)",
+                        PARAM_GROUP, 21, ConfigDef.Width.SHORT, String.format("%s (deprecated)", DEPRECATED_PARAM_SINGLE_TABLE_PER_TOPIC))
+
+                .define(DEPRECATED_PARAM_ADD_NEW_FIELDS, ConfigDef.Type.BOOLEAN, false, ConfigDef.Importance.LOW,
+                        "Add new field names as columns to Kinetica table. (deprecated, use " + PARAM_ADD_NEW_FIELDS + 
+                        " instead)", PARAM_GROUP, 22, ConfigDef.Width.SHORT,
+                        String.format("%s (deprecated)", DEPRECATED_PARAM_ADD_NEW_FIELDS))
+
+                .define(DEPRECATED_PARAM_MAKE_MISSING_FIELDS_NULLABLE, ConfigDef.Type.BOOLEAN, false, ConfigDef.Importance.LOW,
+                        "Make missing from schema fields nullable columns in Kinetica table. (deprecated, use " + 
+                        PARAM_MAKE_MISSING_FIELDS_NULLABLE + " instead)", PARAM_GROUP, 23, ConfigDef.Width.SHORT,
+                        String.format("%s (deprecated)", DEPRECATED_PARAM_MAKE_MISSING_FIELDS_NULLABLE))
+
+                .define(DEPRECATED_PARAM_ALLOW_SCHEMA_EVOLUTION, ConfigDef.Type.BOOLEAN, false, ConfigDef.Importance.LOW,
+                        "Allow schema evolution for incoming Kafka messages. (deprecated, use " + DEPRECATED_PARAM_ALLOW_SCHEMA_EVOLUTION 
+                        + " instead)", PARAM_GROUP, 24, ConfigDef.Width.SHORT, String.format("%s (deprecated)", DEPRECATED_PARAM_ALLOW_SCHEMA_EVOLUTION))
+
+                .define(DEPRECATED_PARAM_UPDATE_ON_EXISTING_PK, ConfigDef.Type.BOOLEAN, true, ConfigDef.Importance.LOW,
+                        "Allow update on existing PK when inserting Kafka messages. (deprecated, use " + PARAM_UPDATE_ON_EXISTING_PK + 
+                        " instead)", PARAM_GROUP, 25, ConfigDef.Width.SHORT,
+                        String.format("%s (deprecated)", DEPRECATED_PARAM_UPDATE_ON_EXISTING_PK));
 
     }
 
