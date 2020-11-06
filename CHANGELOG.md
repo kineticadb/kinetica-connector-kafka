@@ -2,6 +2,13 @@
 
 ## Version 7.1
 
+### Version 7.1.1.2 -- 2020-11-06
+
+#### Uptated
+
+-   Deprecated parameters description in KineticaSinkConnectorConfig
+    for the ease of use in Confluent Connect UI.
+
 ### Version 7.1.1.1 -- 2020-10-30
 
 #### Added
